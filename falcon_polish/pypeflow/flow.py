@@ -166,7 +166,6 @@ def task_report_pre_assembly(self):
         'genome_length': genome_length,
         'length_cutoff': length_cutoff,
     }
-    log.error('Report inputs: {}'.format(repr(kwds)))
     log.info('Report inputs: {}'.format(repr(kwds)))
     report_dict = stats_preassembly.make_dict(**kwds)
     content = json.dumps(report_dict, sort_keys=True, indent=4, separators=(',', ': '))
