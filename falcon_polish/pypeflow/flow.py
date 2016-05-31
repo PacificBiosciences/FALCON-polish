@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 from .. import sys
-from .. import stats_preassembly
+from falcon_kit import stats_preassembly
 
 from pypeflow.pwatcher_bridge import PypeProcWatcherWorkflow, MyFakePypeThreadTaskBase
 from pypeflow.controller import PypeThreadWorkflow
@@ -22,15 +22,6 @@ log = logging.getLogger(__name__)
 #PypeTaskBase = PypeThreadTaskBase
 PypeWorkflow = PypeProcWatcherWorkflow
 PypeTaskBase = MyFakePypeThreadTaskBase
-
-def get_length_cutoff(length_cutoff, fn):
-    if length_cutoff < 0:
-        try:
-            length_cutoff = int(open(fn).read().strip())
-            log.info('length_cutoff=%d from %r' %(length_cutoff, fn))
-        except Exception:
-            log.exception('Unable to read length_cutoff from "%s".' %fn)
-    return length_cutoff # possibly updated
 
 def updated_cfg(options_dict):
     opts = dict()
@@ -150,26 +141,6 @@ ls -ltr
     # TODO: Optionally run this on local machine.
     # By running distributed, this would cause qsub within qsub. This might
     # be impossible on some systems, so we need to make this configurable.
-def task_report_pre_assembly(self):
-    # TODO(CD): Bashify this, in case it is slow.
-    i_raw_reads_fofn_fn = fn(self.raw_reads_fofn)
-    i_preads_fofn_fn = fn(self.preads_fofn)
-    i_length_cutoff_fn = fn(self.length_cutoff)
-    o_json_fn = fn(self.pre_assembly_report)
-    cfg = self.parameters['falcon']
-    genome_length = int(cfg.get('genome_size', 0)) # different name in falcon
-    length_cutoff = int(cfg['length_cutoff'])
-    length_cutoff = get_length_cutoff(length_cutoff, i_length_cutoff_fn)
-    kwds = {
-        'i_raw_reads_fofn_fn': i_raw_reads_fofn_fn,
-        'i_preads_fofn_fn': i_preads_fofn_fn,
-        'genome_length': genome_length,
-        'length_cutoff': length_cutoff,
-    }
-    log.info('Report inputs: {}'.format(repr(kwds)))
-    report_dict = stats_preassembly.make_dict(**kwds)
-    content = json.dumps(report_dict, sort_keys=True, indent=4, separators=(',', ': '))
-    open(o_json_fn, 'w').write(content)
 def task_fasta2referenceset(self):
     """Copied from pbsmrtpipe/pb_tasks/pacbio.py:run_fasta_to_referenceset()
     """
@@ -531,19 +502,6 @@ def flow(config):
             URL = "task://localhost/falcon")
     task = make_task(task_falcon)
     wf.addTask(task)
-
-    pre_assembly_report_pfn = makePypeLocalFile("pre_assembly_stats.json")
-    make_task = PypeTask(
-            inputs = {"length_cutoff": length_cutoff_pfn,
-                      "raw_reads_fofn": input_fofn_pfn,
-                      "preads_fofn": preads_fofn_pfn, },
-            outputs = {"pre_assembly_report": pre_assembly_report_pfn, },
-            parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/report_pre_assembly")
-    task = make_task(task_report_pre_assembly)
-    wf.addTask(task)
-    wf.refreshTargets()
 
     # The reset of the workflow will operate on datasets, not fasta directly.
     referenceset_pfn = makePypeLocalFile('run-fasta2referenceset/asm.referenceset.xml')
