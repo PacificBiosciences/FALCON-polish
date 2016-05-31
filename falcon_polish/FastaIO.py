@@ -1,55 +1,69 @@
-#################################################################################
-# Copyright (c) 2011-2015, Pacific Biosciences of California, Inc.
-#
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# * Redistributions of source code must retain the above copyright
-#   notice, this list of conditions and the following disclaimer.
-# * Redistributions in binary form must reproduce the above copyright
-#   notice, this list of conditions and the following disclaimer in the
-#   documentation and/or other materials provided with the distribution.
-# * Neither the name of Pacific Biosciences nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-#
-# NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY
-# THIS LICENSE.  THIS SOFTWARE IS PROVIDED BY PACIFIC BIOSCIENCES AND ITS
-# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL PACIFIC BIOSCIENCES OR
-# ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-# IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#################################################################################
-
-# Author: David Alexander
-
 """
 Streaming I/O support for FASTA files.
-"""
 
+# Author: David Alexander
+"""
+from __future__ import absolute_import
+from collections import namedtuple, OrderedDict, Sequence
+from os.path import abspath, expanduser, isfile, getsize
+from string import maketrans
+import gzip
+import mmap
+import re
 __all__ = [ "FastaRecord",
             "FastaReader",
             "FastaWriter",
             "FastaTable",
             "IndexedFastaReader",
-            "splitFastaHeader"]
+            "splitFastaHeader",
+            "splitFileContents",
+            "complement",
+            "reverseComplement",
+            "ReaderBase", "WriterBase",
+]
 
-from .base import ReaderBase, WriterBase
-from ._utils import splitFileContents
-from pbcore import sequence
-from pbcore.util.decorators import deprecated
+DNA_COMPLEMENT = maketrans('agcturyswkmbdhvnAGCTURYSWKMBDHV-N',
+                           'tcgannnnnnnnnnnnTCGANNNNNNNNNNN-N')
 
-import mmap, numpy as np, re
-from collections import namedtuple, OrderedDict, Sequence
-from os.path import abspath, expanduser, isfile, getsize
+def reverse(sequence):
+    """Return the reverse of any sequence
+    """
+    return sequence[::-1]
 
+def complement(sequence):
+    """
+    Return the complement of a sequence
+    """
+    if re.search('[^agcturyswkmbdhvnAGCTURYSWKMBDHVN-]', sequence):
+        raise ValueError("Sequence contains invalid DNA characters - "
+                         "only standard IUPAC nucleotide codes allowed")
+    return sequence.translate(DNA_COMPLEMENT)
+
+def reverseComplement(sequence):
+    """
+    Return the reverse-complement of a sequence
+    NOTE: This only currently supports DNA
+    """
+    return complement(sequence)[::-1]
+
+def splitFileContents(f, delimiter, BLOCKSIZE=8192):
+    """
+    Same semantics as f.read().split(delimiter), but with memory usage
+    determined by largest chunk rather than entire file size
+    """
+    from cStringIO import StringIO
+    remainder = StringIO()
+    while True:
+        block = f.read(BLOCKSIZE)
+        if not block:
+            break
+        parts = block.split(delimiter)
+        remainder.write(parts[0])
+        for part in parts[1:]:
+            yield remainder.getvalue()
+            remainder = StringIO()
+            remainder.write(part)
+    yield remainder.getvalue()
 
 def splitFastaHeader( name ):
     """
@@ -126,14 +140,6 @@ class FastaRecord(object):
         """
         return self._sequence
 
-    @property
-    @deprecated
-    def length(self):
-        """
-        Get the length of the FASTA sequence
-        """
-        return len(self._sequence)
-
     @classmethod
     def fromString(cls, s):
         """
@@ -155,7 +161,7 @@ class FastaRecord(object):
         Return a new FastaRecord with the reverse-complemented DNA sequence.
         Optionally, supply a name
         """
-        rcSequence = sequence.reverseComplement(self.sequence)
+        rcSequence = reverseComplement(self.sequence)
         if preserveHeader:
             return FastaRecord(self.header, rcSequence)
         else:
@@ -186,6 +192,84 @@ class FastaRecord(object):
         return (">%s\n" % self.header) + \
             wrap(self.sequence, self.COLUMNS)
 
+def isFileLikeObject(o):
+    return hasattr(o, "read") and hasattr(o, "write")
+
+def getFileHandle(filenameOrFile, mode="r"):
+    """
+    Given a filename not ending in ".gz", open the file with the
+    appropriate mode.
+
+    Given a filename ending in ".gz", return a filehandle to the
+    unzipped stream.
+
+    Given a file object, return it unless the mode is incorrect--in
+    that case, raise an exception.
+    """
+    assert mode in ("r", "w")
+
+    if isinstance(filenameOrFile, basestring):
+        filename = abspath(expanduser(filenameOrFile))
+        if filename.endswith(".gz"):
+            return gzip.open(filename, mode)
+        else:
+            return open(filename, mode)
+    elif isFileLikeObject(filenameOrFile):
+        return filenameOrFile
+    else:
+        raise Exception("Invalid type to getFileHandle")
+
+class ReaderBase(object):
+    def __init__(self, f):
+        """
+        Prepare for iteration through the records in the file
+        """
+        self.file = getFileHandle(f, "r")
+        if hasattr(self.file, "name"):
+            self.filename = self.file.name
+        else:
+            self.filename = "(anonymous)"
+
+    def close(self):
+        """
+        Close the underlying file
+        """
+        self.file.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def __repr__(self):
+        return "<%s for %s>" % (type(self).__name__, self.filename)
+
+class WriterBase(object):
+    def __init__(self, f):
+        """
+        Prepare for output to the file
+        """
+        self.file = getFileHandle(f, "w")
+        if hasattr(self.file, "name"):
+            self.filename = self.file.name
+        else:
+            self.filename = "(anonymous)"
+
+    def close(self):
+        """
+        Close the underlying file
+        """
+        self.file.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def __repr__(self):
+        return "<%s for %s>" % (type(self).__name__, self.filename)
 
 class FastaReader(ReaderBase):
     """
@@ -378,11 +462,6 @@ class IndexedFastaRecord(object):
     @property
     def sequence(self):
         return MmappedFastaSequence(self.view, self.faiRecord)
-
-    @property
-    @deprecated
-    def length(self):
-        return self.faiRecord.length
 
     def __len__(self):
         return self.faiRecord.length
