@@ -17,17 +17,26 @@ def run(subreadset, fofn):
     fns = dset.toFofn()
     import pprint
     log.info('resources in {!r}:\n{}'.format(subreadset, pprint.pformat(fns)))
-    ts = 1000000 # about 15 mins each
-    log.debug('Splitting with dset.split(zmws=False, targetSize={}, ignoreSubDatasets=False, maxChunks={},)'.format(
-        ts, maxChunks))
-    dset_chunks = dset.split(zmws=False, targetSize=ts, ignoreSubDatasets=False, maxChunks=maxChunks,)
-            #targetSize=1, # chunks=n, breakContigs=True
+    nrecs = len(dset)
+    # HG with 70x coverage => 200G bases total
+    ts = 50000 # @ 20k/read => 1G bases, ~300MB .gz => ~200 chunks for Human
+    ts = 500000 # @ 20k/read => 10G bases, ~3GB .gz => ~20 chunks for Human
+    # and we expect about 7-10min per chunk.
+    chunks = nrecs // ts
+    log.info('num_chunks={:g} ({:g} / {:g})'.format(chunks, nrecs, ts))
+    log.info('Splitting with dset.split(zmws=False, chunks={}, ignoreSubDatasets=True, maxChunks={},)'.format(
+        chunks, maxChunks))
+    dset_chunks = dset.split(zmws=False, chunks=chunks, ignoreSubDatasets=True, maxChunks=maxChunks,
+            updateCounts=False,
+            #targetSize=1, breakContigs=True
+    )
 
     chunk_fns = []
     for i, dset in enumerate(dset_chunks):
-        chunk_name = 'chunk_{}.subreadset.xml'.format(i)
+        chunk_name = 'chunk_{:03d}.subreadset.xml'.format(i) # TODO: 02
         chunk_fn = os.path.join(dir_name, chunk_name)
-        dset.write(chunk_fn)
+        dset.updateCounts()
+        dset.write(chunk_fn, validate=False) # , relPaths=True
         chunk_fns.append(chunk_fn)
     with open(fofn, 'w') as ofs:
         for fn in chunk_fns:

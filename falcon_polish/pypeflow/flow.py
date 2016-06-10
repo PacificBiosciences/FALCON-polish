@@ -121,8 +121,10 @@ def task_bam2fasta_gz(self):
     actual = '{}.fasta.gz'.format(prefix) # crazy convention
     #python -m falcon_polish.mains.run_bam2fasta {i_dataset_fn} {o_fasta_fn}
     bash = """
-bam2fasta -o {prefix} {i_dataset_fn}
-mv -f {actual} {o_fasta_gz_fn}
+set -vex
+mkdir -p {prefix}
+time bam2fasta -o {prefix} {i_dataset_fn}
+time mv -f {actual} {o_fasta_gz_fn}
 touch {o_fasta_done_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_bam2fasta.sh')
@@ -138,6 +140,7 @@ def task_bam_scatter(self):
     wdir = os.path.dirname(o_split_subreadsets_fofn_fn)
     mkdirs(wdir)
     bash = """
+set -vex
 python -m falcon_polish.mains.run_bam_scatter {i_dataset_fn} {o_split_subreadsets_fofn_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_bam_scatter.sh')
@@ -284,6 +287,7 @@ def task_gc_scatter(self):
     chunks_fofn_fn = fn(self.out_fofn)
     wdir, chunks_fofn_fn = os.path.split(chunks_fofn_fn)
     bash = """
+set -vex
 python -m falcon_polish.mains.run_gc_scatter \
         {alignmentset_fn} \
         {referenceset_fn} \
@@ -314,6 +318,7 @@ def task_gc_gather(self):
     open(fastq_fofn_fn, 'w').write('\n'.join(dset_fns) + '\n')
 
     bash = r"""
+set -vex
 python -m falcon_polish.mains.run_gc_gather \
         {fasta_ds_fofn_fn} \
         {fastq_fofn_fn} \
@@ -346,6 +351,7 @@ def task_genomic_consensus(self):
     assert odir == wdir
     # Possibly we should escape '{options}'
     bash = """
+set -vex
 python -m falcon_polish.mains.run_variantCaller --log-level DEBUG --options '{options}' \
         {alignmentset_fn} \
         {referenceset_fn} \
@@ -380,6 +386,7 @@ def task_polished_assembly_report(self):
     """
     # https://github.com/PacificBiosciences/pbreports/pull/186
     bash = r"""
+set -vex
 python -m pbreports.report.summarize_coverage.summarize_coverage \
         {options} \
         {gathered_alignmentset_fn} \
@@ -432,9 +439,9 @@ def create_tasks_fasta2DB(split_subreadsets_fofn_pfn, parameters):
     topdir = os.path.dirname(fn(split_subreadsets_fofn_pfn)) # for now
     # Create the fastas in parallel.
     for i, chunk_fn in enumerate(open(fn(split_subreadsets_fofn_pfn)).read().splitlines()):
-        wdir = os.path.join(topdir, 'fasta_job_{:02d}'.format(i))
+        wdir = os.path.join(topdir, 'fasta_job_{:03d}'.format(i)) # TODO: 02
         chunk_pfn = makePypeLocalFile(os.path.join(wdir, chunk_fn))
-        fasta_done_fn = os.path.join(wdir, 'chunk_{:02d}_done'.format(i))
+        fasta_done_fn = os.path.join(wdir, 'chunk_{:03d}_done'.format(i)) # TODO: 02
         # By depending on a sentinel, we are allowed to delete fastas later.
         # Note: i might not match num in chunk_fn, but that is ok
         fasta_done_pfn = makePypeLocalFile(fasta_done_fn)
