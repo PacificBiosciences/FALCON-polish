@@ -8,14 +8,17 @@ import argparse
 import logging
 import sys
 
+log = logging.getLogger()
+
 def run(in_file, out_file, filterstr):
     dataSet = openDataSet(in_file)
-    dataSet.updateCounts() # just in case
-    filters = parse_filter_list(filterstr.split(','))
+    filters = dict(parse_filter_list(filterstr.split(',')))
+    log.info("Adding {} filters to {}: {}".format(
+        len(filters), in_file, out_file, repr(filters)))
     dataSet.filters.addFilter(**filters)
-    #log.info("{i} other filters added".format(i=len(filters)))
-    dataSet.updateCounts()
-    dataSet.write(out_file)
+    log.info("Added. Writing new dataset {}".format(repr(out_file)))
+    #dataSet.updateCounts() # just in case # no, not needed
+    dataSet.write(out_file, validate=False) # to avoid warnings
 
 def main(argv=sys.argv):
     description = """Set up filters in the dataset for a BAM resource.
@@ -42,4 +45,6 @@ to generate the dataset.
     run(**args)
 
 if __name__ == "__main__":
+    logging.basicConfig()
+    log.setLevel(logging.DEBUG)
     main(sys.argv)
