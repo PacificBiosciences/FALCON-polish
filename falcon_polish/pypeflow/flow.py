@@ -142,20 +142,18 @@ ls -ltr
     # By running distributed, this would cause qsub within qsub. This might
     # be impossible on some systems, so we need to make this configurable.
 def task_fasta2referenceset(self):
-    """Copied from pbsmrtpipe/pb_tasks/pacbio.py:run_fasta_to_referenceset()
-    """
-    input_file_name = fn(self.fasta)
-    output_file_name = fn(self.referenceset)
-    wdir, output_file_name = os.path.split(output_file_name)
+    i_fasta_fn = fn(self.fasta)
+    o_referenceset_fn = fn(self.referenceset)
+    wdir= os.path.dirname(o_referenceset_fn)
     bash = """
-rm -f {output_file_name} {input_file_name}.fai
-dataset create --type ReferenceSet --generateIndices {output_file_name} {input_file_name}
+set -vex
+rm -f {o_referenceset_fn} {i_fasta_fn}.fai
+python -m falcon_polish.mains.run_fasta2referenceset {i_fasta_fn} {o_referenceset_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_falcon.sh')
+    bash_fn = os.path.join(wdir, 'run_fasta2referenceset.sh')
     mkdirs(wdir)
     open(bash_fn, 'w').write(bash)
-    cmd = 'cd {wdir} && /bin/bash {bash_fn}'.format(**locals())
-    sys.system(cmd)
+    self.generated_script_fn = bash_fn
 def task_pbalign_scatter(self):
     """This might have problems if run in /tmp.
     """
