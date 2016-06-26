@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from sys import stderr, stdout
 from contextlib import contextmanager
 import logging
 import os

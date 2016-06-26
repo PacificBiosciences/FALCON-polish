@@ -7,6 +7,9 @@ from pypeflow.controller import PypeThreadWorkflow
 from pypeflow.data import PypeLocalFile, makePypeLocalFile, fn
 from pypeflow.task import PypeTask, PypeThreadTaskBase
 
+import falcon_kit.mains.run1
+import falcon_kit.run_support
+
 import contextlib
 import gzip
 import json
@@ -119,28 +122,24 @@ def task_prepare_falcon(self):
     config_falcon = self.parameters['falcon']
     run_prepare_falcon(config_falcon, i_fasta_fn, fc_cfg_fn, fc_json_config_fn, input_fofn_fn)
 def task_falcon(self):
-    fc_cfg_fn = fn(self.fc_cfg)
     o_fasta_fn = fn(self.asm_fasta)
     o_preads_fofn_fn = fn(self.preads_fofn)
+    o_length_cutoff_fn = fn(self.length_cutoff)
     wdir, o_fasta_fn = os.path.split(o_fasta_fn)
     odir, o_preads_fofn_fn = os.path.split(o_preads_fofn_fn)
     assert odir == wdir
     o_preads_fofn_fn = os.path.basename(o_preads_fofn_fn)
     bash = """
-#rm -f {o_fasta_fn} {o_preads_fofn_fn} # preassembly report depends on this, so we must not pre-delete
-#TODO: Let falcon use logging.json?
-fc_run1 {fc_cfg_fn}
 ln -sf 2-asm-falcon/p_ctg.fa {o_fasta_fn}
 ln -sf 1-preads_ovl/input_preads.fofn {o_preads_fofn_fn}
+ln -sf 0-rawreads/length_cutoff {o_length_cutoff_fn}
 ls -ltr
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_falcon.sh')
     mkdirs(wdir)
     open(bash_fn, 'w').write(bash)
     self.generated_script_fn = bash_fn
-    # TODO: Optionally run this on local machine.
-    # By running distributed, this would cause qsub within qsub. This might
-    # be impossible on some systems, so we need to make this configurable.
+    # TODO: Run this on local machine.
 def task_fasta2referenceset(self):
     i_fasta_fn = fn(self.fasta)
     o_referenceset_fn = fn(self.referenceset)
@@ -448,13 +447,13 @@ def flow(config):
     parameters = config
     #exitOnFailure=config['stop_all_jobs_on_failure'] # only matter for parallel jobs
     #wf.refreshTargets(exitOnFailure=exitOnFailure)
-    #concurrent_jobs = config["pa_concurrent_jobs"]
-    #PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
     #wf = PypeThreadWorkflow()
     #wf = PypeWorkflow()
     #wf = PypeWorkflow(job_type='local')
     log.debug('config=\n{}'.format(pprint.pformat(config)))
     wf = PypeWorkflow(job_type=config['hgap']['job_type'])
+    concurrent_jobs = 16 # TODO: Configure this.
+    PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
 
     dataset_pfn = makePypeLocalFile(config['pbsmrtpipe']['input_files'][0])
     filtered_fasta_pfn = makePypeLocalFile('run-bam2fasta/input.fasta')
@@ -484,13 +483,25 @@ def flow(config):
     wf.addTask(task)
     wf.refreshTargets()
 
-    # We could integrate the FALCON workflow here, but for now we will just execute it,
-    # so we can repeat the sub-flow easily.
+    input_config_fn = fn(fc_cfg_pfn)
+    with sys.cd('run-falcon'):
+        falcon_kit.mains.run1.fc_run_logger = falcon_kit.run_support.logger = logging.getLogger('falcon')
+        fc_cfg = falcon_kit.run_support.get_dict_from_old_falcon_cfg(
+                falcon_kit.run_support.parse_config(input_config_fn))
+        PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
+        # FALCON takes over the workflow for a while.
+        # (For debugging, it is still possible to restart just fc_run, if desired.)
+        falcon_asm_done_pfn = falcon_kit.mains.run1.run(wf, fc_cfg,
+                input_fofn_plf=input_fofn_pfn, # _pfn should be _plf, but oh well
+                setNumThreadAllowed=PypeProcWatcherWorkflow.setNumThreadAllowed)
+        PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
+
+    # Here is a sym-linking task to help us attach falcon into the dependency graph.
     asm_fasta_pfn = makePypeLocalFile('run-falcon/asm.fasta')
     preads_fofn_pfn = makePypeLocalFile('run-falcon/preads.fofn') # for the preassembly report
-    length_cutoff_pfn = makePypeLocalFile('run-falcon/0-rawreads/length_cutoff')
+    length_cutoff_pfn = makePypeLocalFile('run-falcon/length_cutoff')
     make_task = PypeTask(
-            inputs = {"fc_cfg": fc_cfg_pfn,},
+            inputs = {"falcon_asm_done": falcon_asm_done_pfn,},
             outputs = {"asm_fasta": asm_fasta_pfn,
                        "length_cutoff": length_cutoff_pfn,
                        "preads_fofn": preads_fofn_pfn,

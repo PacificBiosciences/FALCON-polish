@@ -199,7 +199,9 @@ pa_concurrent_jobs = 32
 """
 
 def update2(start, updates):
-    # Skip '~comment' entries.
+    """Update 'start' dict with 'updates' to 2 levels.
+    Skip '~comment' entries.
+    """
     for key1, val1 in updates.iteritems():
         if key1.startswith('~'):
             continue
