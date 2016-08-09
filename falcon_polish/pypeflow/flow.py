@@ -451,7 +451,11 @@ def flow(config):
     #wf = PypeWorkflow()
     #wf = PypeWorkflow(job_type='local')
     log.debug('config=\n{}'.format(pprint.pformat(config)))
-    wf = PypeWorkflow(job_type=config['hgap']['job_type'])
+    # Set some defaults on the Workflow.
+    wf = PypeWorkflow(
+            job_type=config['hgap']['job_type'],
+            job_queue=config['hgap']['job_queue'],
+    )
     concurrent_jobs = 16 # TODO: Configure this.
     PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
 
@@ -512,7 +516,7 @@ def flow(config):
     task = make_task(task_falcon)
     wf.addTask(task)
 
-    # The reset of the workflow will operate on datasets, not fasta directly.
+    # The rest of the workflow will operate on datasets, not fasta directly.
     referenceset_pfn = makePypeLocalFile('run-fasta2referenceset/asm.referenceset.xml')
     make_task = PypeTask(
             inputs =  {"fasta": asm_fasta_pfn,},
