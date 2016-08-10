@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 def run_fasta_to_referenceset(input_file_name, output_file_name, prog):
     """Copied from pbsmrtpipe/pb_tasks/pacbio.py:run_fasta_to_referenceset()
     """
-    args = [prog, "create", "--type ReferenceSet", "--generateIndices",
+    args = ['dataset', "create", "--type ReferenceSet", "--generateIndices",
             output_file_name, input_file_name]
     system(" ".join(args))
 
@@ -49,15 +49,6 @@ def run_fasta_to_reference(input_file_name, output_file_name,
 
 def run(fasta, ref):
     try:
-        # This uses pbscala and also runs sawriter.
-        reference_name = op.splitext(op.basename(fasta))[0]
-        organism = "unknown"
-        ploidy = "haploid"
-        run_fasta_to_reference(fasta, ref, organism=organism, reference_name=reference_name, ploidy=ploidy)
-    except Exception:
-        log.exception('We will try someting else.')
-
-    try:
         # This uses Python + BAM library.
         run_fasta_to_referenceset(fasta, ref, 'dataset')
         return
@@ -71,8 +62,19 @@ def run(fasta, ref):
         run_fasta_to_referenceset(fasta, ref, 'dataset.py')
         return
     except Exception:
+        log.exception('We will try someting else.')
+        raise
+
+    try:
+        # This uses pbscala and also runs sawriter.
+        reference_name = op.splitext(op.basename(fasta))[0]
+        organism = "unknown"
+        ploidy = "haploid"
+        run_fasta_to_reference(fasta, ref, organism=organism, reference_name=reference_name, ploidy=ploidy)
+    except Exception:
         log.exception('Out of ideas.')
         raise
+
 
 def main(argv=sys.argv):
     description = """Create referenceset XML from fasta.
