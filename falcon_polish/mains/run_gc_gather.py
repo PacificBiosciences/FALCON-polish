@@ -25,7 +25,7 @@ def __gather_contigset(input_files, output_file, new_resource_file):
     tbr = ContigSet(*input_files)
     tbr.consolidate(new_resource_file)
     tbr.newUuid()
-    tbr.write(output_file)
+    tbr.write(output_file, relPaths=True)
     return output_file
 def run_gc_gather(dset_fns, ds_out_fn):
     """Gather contigsets/fasta into 1 contigset/fasta.

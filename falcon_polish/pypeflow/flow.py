@@ -268,7 +268,10 @@ python -m falcon_polish.mains.run_gc_gather \
         {fastq_out_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_gc_gather.sh')
-    open(bash_fn, 'w').write(bash)
+    #open(bash_fn, 'w').write(bash)
+    job_done = bash_fn + '.done'
+    hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
+    get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
 def task_genomic_consensus(self):
     alignmentset_fn = fn(self.alignmentset)
@@ -335,7 +338,10 @@ python -m pbreports.report.polished_assembly \
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_report.sh')
     mkdirs(wdir)
-    open(bash_fn, 'w').write(bash)
+    #open(bash_fn, 'w').write(bash)
+    job_done = bash_fn + '.done'
+    hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
+    get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
 def task_foo(self):
     log.debug('WARNME1 {!r}'.format(__name__))
