@@ -12,6 +12,7 @@ from pbcore.io import ContigSet
 import argparse
 import logging
 import sys
+import traceback
 
 def run(referenceset, fastq, gff, fasta, contigset, alignmentset, options, log_level):
     #'--log-file foo.log',
@@ -31,7 +32,7 @@ def run(referenceset, fastq, gff, fasta, contigset, alignmentset, options, log_l
         import pysam
         pysam.faidx(fasta)
         ds = ContigSet(fasta, strict=True)
-        ds.write(contigset)
+        ds.write(contigset, relPaths=True)
         say('Successfully wrapped fasta {!r} in contigset {!r}'.format(fasta, contigset))
     except Exception:
         say(traceback.format_exc())
