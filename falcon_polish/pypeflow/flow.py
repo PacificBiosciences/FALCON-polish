@@ -453,8 +453,8 @@ def flow(config):
     log.debug('config=\n{}'.format(pprint.pformat(config)))
     # Set some defaults on the Workflow.
     wf = PypeWorkflow(
-            job_type=config['hgap']['job_type'],
-            job_queue=config['hgap']['job_queue'],
+            job_type=config['hgap'].get('job_type'),
+            job_queue=config['hgap'].get('job_queue'),
     )
     concurrent_jobs = 16 # TODO: Configure this.
     PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
