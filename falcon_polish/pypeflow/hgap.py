@@ -125,6 +125,8 @@ DEFAULT_OPTIONS = """
     "GenomeSize": 8000,
     "min_length_cutoff": 1,
     "job_type": "local",
+    "job_queue": "DEFAULT_JOB_QUEUE",
+    "use_tmpdir": "true",
     "~comment": "Overrides for full HGAP pipeline"
   },
   "falcon": {
@@ -140,7 +142,6 @@ DEFAULT_OPTIONS = """
     "pa_HPCdaligner_option": "-v -k16 -h35 -w7 -e.70 -l40 -s100 -M16",
     "pa_concurrent_jobs": "32",
     "seed_coverage": "74",
-    "use_tmpdir": "true",
     "~comment": "Overrides for FALCON"
   },
   "pbalign": {

@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from .. import sys
 from falcon_kit import stats_preassembly
+from falcon_kit.bash import get_write_script_and_wrapper
 
 from pypeflow.pwatcher_bridge import PypeProcWatcherWorkflow, MyFakePypeThreadTaskBase
 from pypeflow.controller import PypeThreadWorkflow
@@ -18,6 +19,7 @@ import os
 import pprint
 import re
 import cStringIO
+import tempfile
 
 log = logging.getLogger(__name__)
 
@@ -458,6 +460,14 @@ def flow(config):
     )
     concurrent_jobs = 16 # TODO: Configure this.
     PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
+
+    use_tmpdir = config['hgap'].get('use_tmpdir')
+    if use_tmpdir:
+        if '/' in use_tmpdir:
+            tempfile.tempdir = use_tmpdir
+            log.info('Using tempfile.tempdir={}'.format(tempfile.tempdir))
+        else:
+            log.info('Keeping tempfile.tempdir={}'.format(tempfile.tempdir))
 
     dataset_pfn = makePypeLocalFile(config['pbsmrtpipe']['input_files'][0])
     filtered_fasta_pfn = makePypeLocalFile('run-bam2fasta/input.fasta')
