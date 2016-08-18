@@ -140,6 +140,7 @@ DEFAULT_OPTIONS = """
     "pa_HPCdaligner_option": "-v -k16 -h35 -w7 -e.70 -l40 -s100 -M16",
     "pa_concurrent_jobs": "32",
     "seed_coverage": "74",
+    "use_tmpdir": "true",
     "~comment": "Overrides for FALCON"
   },
   "pbalign": {
