@@ -113,8 +113,8 @@ python -m falcon_polish.mains.run_bam2fasta {f_dataset_fn} {o_fasta_fn}
     mkdirs(wdir) # Still needed, for now...
     #open(bash_fn, 'w').write(bash)
     job_done = bash_fn + '.done'
-    fc_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
-    get_write_script_and_wrapper(fc_config)(bash, bash_fn, job_done)
+    hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
+    get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
 def task_prepare_falcon(self):
     """Pre-process FALCON cfg.
@@ -156,7 +156,10 @@ python -m falcon_polish.mains.run_fasta2referenceset {i_fasta_fn} {o_referencese
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_fasta2referenceset.sh')
     mkdirs(wdir)
-    open(bash_fn, 'w').write(bash)
+    #open(bash_fn, 'w').write(bash)
+    job_done = bash_fn + '.done'
+    hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
+    get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
 def task_pbalign_scatter(self):
     """This might have problems if run in /tmp.
