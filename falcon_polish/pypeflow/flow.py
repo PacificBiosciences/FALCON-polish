@@ -210,10 +210,15 @@ def task_pbalign(self):
     reads_fn = fn(self.dataset)
     referenceset_fn = fn(self.referenceset)
     o_alignmentset_fn = fn(self.alignmentset)
+    tmpdir = tempfile.tempdir
     task_opts = self.parameters['pbalign']
     options = task_opts.get('options', '')
     algorithmOptions = task_opts.get('algorithmOptions', '')
     wdir, o_alignmentset_fn = os.path.split(o_alignmentset_fn)
+
+    # Write a file of absolute paths. But that file is relative to CWD:
+    abs_alignmentset_fn = 'abs.' + o_alignmentset_fn
+
     #'--debug', # requires 'ipdb'
     #'--profile', # kinda interesting, but maybe slow?
     #'--algorithmOptions "-minMatch 12 -bestn 10 -minPctSimilarity 70.0"',
@@ -222,11 +227,15 @@ def task_pbalign(self):
     #'--minAccuracy 70.0',
     #'--minLength 50',
     bash = """
-pbalign --verbose --nproc 16 {options} --algorithmOptions "{algorithmOptions}" {reads_fn} {referenceset_fn} {o_alignmentset_fn}
+pbalign --verbose --nproc 16 {options} --tmpDir {tmpdir} --algorithmOptions "{algorithmOptions}" {reads_fn} {referenceset_fn} {o_alignmentset_fn}
+dataset relativize {o_alignmentset_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_pbalign.sh')
     mkdirs(wdir)
-    open(bash_fn, 'w').write(bash)
+    #open(bash_fn, 'w').write(bash)
+    job_done = bash_fn + '.done'
+    hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
+    get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
 def task_gc_scatter(self):
     alignmentset_fn = fn(self.alignmentset)
