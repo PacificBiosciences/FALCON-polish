@@ -177,7 +177,10 @@ python -m pbcoretools.tasks.scatter_subread_reference -v --max_nchunks=5 \
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_pbalign_scatter.sh')
     mkdirs(wdir)
-    open(bash_fn, 'w').write(bash)
+    #open(bash_fn, 'w').write(bash)
+    job_done = bash_fn + '.done'
+    hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
+    get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
 def task_pbalign_gather(self):
     ds_out_fn = fn(self.ds_out)
