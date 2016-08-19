@@ -196,7 +196,10 @@ python -m falcon_polish.mains.run_pbalign_gather \
         {ds_out_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_pbalign_gather.sh')
-    open(bash_fn, 'w').write(bash)
+    #open(bash_fn, 'w').write(bash)
+    job_done = bash_fn + '.done'
+    hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
+    get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
 def task_pbalign(self):
     """pbalign will eventually call blasr, like this:
