@@ -20,8 +20,9 @@ def run(alignmentset, referenceset, fofn):
     chunk_fns = []
     for i, dset in enumerate(dset_chunks):
         chunk_name = 'chunk_alignmentset_{}.alignmentset.xml'.format(i)
-        chunk_fn = os.path.join(dir_name, chunk_name)
-        dset.write(chunk_fn)
+        #chunk_fn = os.path.join(dir_name, chunk_name)
+        chunk_fn = chunk_name # rel to CWD
+        dset.write(chunk_fn, relPaths=True)
         chunk_fns.append(chunk_fn)
     with open(fofn, 'w') as ofs:
         for fn in chunk_fns:

@@ -250,7 +250,10 @@ python -m falcon_polish.mains.run_gc_scatter \
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_gc_scatter.sh')
     mkdirs(wdir)
-    open(bash_fn, 'w').write(bash)
+    #open(bash_fn, 'w').write(bash)
+    job_done = bash_fn + '.done'
+    hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
+    get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
 def task_gc_gather(self):
     dos = self.inputDataObjs
@@ -422,7 +425,9 @@ def create_tasks_gc(fofn_pfn, referenceset_pfn, parameters):
     tasks = list()
     contigsets = dict()
     fastqs = dict()
-    for i, alignmentset_fn in enumerate(open(fn(fofn_pfn)).read().split()):
+    # Assume fofn of gc chunks are all relative to the dir of the fofn.
+    for i, alignmentset_bn in enumerate(open(fn(fofn_pfn)).read().split()):
+        alignmentset_fn = os.path.join(os.path.dirname(fn(fofn_pfn)), alignmentset_bn)
         wdir = 'run-gc-{:02}'.format(i)
         mkdirs(wdir) # Assume CWD is correct.
         alignmentset_pfn = makePypeLocalFile(alignmentset_fn) # New pfn cuz it was not pfn before.
