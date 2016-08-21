@@ -136,7 +136,8 @@ def task_falcon(self):
     o_preads_fofn_fn = os.path.basename(o_preads_fofn_fn)
     bash = """
 ln -sf 2-asm-falcon/p_ctg.fa {o_fasta_fn}
-ln -sf 1-preads_ovl/input_preads.fofn {o_preads_fofn_fn}
+#ln -sf 1-preads_ovl/input_preads.fofn {o_preads_fofn_fn}
+ln -sf 0-rawreads/preads/input_preads.fofn {o_preads_fofn_fn}
 ln -sf 0-rawreads/length_cutoff {o_length_cutoff_fn}
 ls -ltr
 """.format(**locals())
