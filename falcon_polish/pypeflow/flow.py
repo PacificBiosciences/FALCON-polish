@@ -499,7 +499,8 @@ def flow(config):
 
     use_tmpdir = config['hgap'].get('use_tmpdir')
     if use_tmpdir:
-        if '/' in use_tmpdir:
+        log.info('hgap.use_tmpdir={!r}'.format(use_tmpdir))
+        if use_tmpdir is not True and '/' in use_tmpdir:
             tempfile.tempdir = use_tmpdir
             log.info('Using tempfile.tempdir={}'.format(tempfile.tempdir))
         else:
