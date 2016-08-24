@@ -171,6 +171,7 @@ def task_pbalign_scatter(self):
     wdir, out_json_fn = os.path.split(out_json_fn)
     mkdirs(wdir)
     bash = r"""
+#rm -f {out_json_fn}
 python -m pbcoretools.tasks.scatter_subread_reference -v --max_nchunks=5 \
         {reads_fn} \
         {referenceset_fn} \
@@ -192,9 +193,11 @@ def task_pbalign_gather(self):
     ds_fofn_fn = os.path.join(wdir, 'gathered.alignmentsets.fofn')
     open(ds_fofn_fn, 'w').write('\n'.join(dset_fns) + '\n')
     bash = r"""
+#rm -f {ds_out_fn}
 python -m falcon_polish.mains.run_pbalign_gather \
         {ds_fofn_fn} \
         {ds_out_fn}
+#pbvalidate {ds_out_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_pbalign_gather.sh')
     #open(bash_fn, 'w').write(bash)
@@ -234,8 +237,12 @@ def task_pbalign(self):
     #'--minAccuracy 70.0',
     #'--minLength 50',
     bash = """
+o_fn={o_alignmentset_fn}
+#rm -f ${{o_fn%.*}}
 pbalign --verbose --nproc 16 {options} --tmpDir {tmpdir} --algorithmOptions "{algorithmOptions}" {reads_fn} {referenceset_fn} {o_alignmentset_fn}
+#pbvalidate {o_alignmentset_fn}
 dataset relativize {o_alignmentset_fn}
+#pbvalidate {o_alignmentset_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_pbalign.sh')
     mkdirs(wdir)

@@ -22,6 +22,8 @@ def run(alignmentset, referenceset, fofn):
         chunk_name = 'chunk_alignmentset_{}.alignmentset.xml'.format(i)
         #chunk_fn = os.path.join(dir_name, chunk_name)
         chunk_fn = chunk_name # rel to CWD
+        if os.path.exists(chunk_fn):
+            os.unlink(chunk_fn)
         dset.write(chunk_fn, relPaths=True)
         chunk_fns.append(chunk_fn)
     with open(fofn, 'w') as ofs:
