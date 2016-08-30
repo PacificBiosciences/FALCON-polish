@@ -351,6 +351,7 @@ def task_polished_assembly_report(self):
                        args.num_regions, args.region_size,
                        args.force_num_regions)
     """
+    # https://github.com/PacificBiosciences/pbreports/pull/186
     bash = r"""
 python -m pbreports.report.summarize_coverage.summarize_coverage \
         {options} \
@@ -361,6 +362,8 @@ python -m pbreports.report.polished_assembly \
         {alignment_summary_gff_fn} \
         {polished_fastq_fn} \
         {report_fn}
+ln -sf {wdir}/polished_coverage_vs_quality.png .
+ln -sf {wdir}/polished_coverage_vs_quality_thumb.png .
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_report.sh')
     mkdirs(wdir)
