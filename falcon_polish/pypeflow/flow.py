@@ -362,8 +362,6 @@ python -m pbreports.report.polished_assembly \
         {alignment_summary_gff_fn} \
         {polished_fastq_fn} \
         {report_fn}
-ln -sf {wdir}/polished_coverage_vs_quality.png .
-ln -sf {wdir}/polished_coverage_vs_quality_thumb.png .
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_report.sh')
     mkdirs(wdir)
@@ -644,6 +642,10 @@ def flow(config):
     wf.addTask(task)
 
     wf.refreshTargets()
+
+    par_dir = os.path.dirname(fn(polished_assembly_report_json_pfn))
+    sys.symlink(os.path.join(par_dir, 'polished_coverage_vs_quality.png'))
+    sys.symlink(os.path.join(par_dir, 'polished_coverage_vs_quality_thumb.png'))
     #return
     ##############
 
