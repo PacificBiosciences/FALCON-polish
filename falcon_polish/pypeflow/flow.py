@@ -72,19 +72,17 @@ def ContentUpdater(fn):
     if new_content != old_content:
         with open(fn, 'w') as f:
             f.write(new_content)
-def run_prepare_falcon(falcon_parameters, i_fasta_fn, fc_cfg_fn, fc_json_config_fn, input_fofn_fn):
+def run_prepare_falcon(falcon_parameters, i_input_fofn_fn, fc_cfg_fn, fc_json_config_fn):
     wdir = os.path.dirname(fc_json_config_fn)
     mkdirs(wdir)
-    with ContentUpdater(input_fofn_fn) as f:
-        f.write('{}\n'.format(i_fasta_fn))
     config_falcon = updated_cfg(dict(falcon_parameters))
-    config_falcon['input_fofn'] = input_fofn_fn
+    config_falcon['input_fofn'] = i_input_fofn_fn
     with ContentUpdater(fc_cfg_fn) as f:
         dict2ini(f, config_falcon)
     with ContentUpdater(fc_json_config_fn) as f:
         dict2json(f, config_falcon)
 
-def task_bam2fasta(self):
+def task_filterbam(self):
     """
         {
             "other_filters": "rq >= 0.7",
@@ -94,8 +92,7 @@ def task_bam2fasta(self):
         }
     """
     i_dataset_fn = fn(self.dataset)
-    o_fasta_fn = fn(self.fasta)
-    f_dataset_fn = 'filtered.subreadset.xml'
+    o_dataset_fn = fn(self.filtered)
     config = self.parameters.get('pbcoretools.tasks.filterdataset', None) # TODO: Drop this.
     if not config:
         config = self.parameters['pbcoretools']
@@ -104,10 +101,29 @@ def task_bam2fasta(self):
     filters = config.get('filters', None)
     if not filters:
         filters = other_filters + ', length gte {:d}'.format(int(read_length))
-    wdir, o_fasta_fn = os.path.split(o_fasta_fn)
+    wdir = os.path.dirname(o_dataset_fn)
     bash = """
-python -m falcon_polish.mains.run_filterbam {i_dataset_fn} {f_dataset_fn} '{filters}'
-python -m falcon_polish.mains.run_bam2fasta {f_dataset_fn} {o_fasta_fn}
+set -vex
+python -m falcon_polish.mains.run_filterbam {i_dataset_fn} {o_dataset_fn} '{filters}'
+""".format(**locals())
+    bash_fn = os.path.join(wdir, 'run_filterbam.sh')
+    mkdirs(wdir)
+    open(bash_fn, 'w').write(bash)
+    sys.system('bash {}'.format(bash_fn))
+def task_bam2fasta_gz(self):
+    i_dataset_fn = fn(self.dataset)
+    o_fasta_done_fn = fn(self.fasta_done)
+    o_fasta_fn = fasta_from_fasta_done(o_fasta_done_fn)
+    o_fasta_gz_fn = o_fasta_fn + '.gz'
+    wdir = os.path.dirname(o_fasta_done_fn)
+    prefix_basename = os.path.basename(o_fasta_fn)[:-6] #sans .fasta
+    prefix = '/tmp/cdunn/{}'.format(prefix_basename)
+    actual = '{}.fasta.gz'.format(prefix) # crazy convention
+    #python -m falcon_polish.mains.run_bam2fasta {i_dataset_fn} {o_fasta_fn}
+    bash = """
+bam2fasta -o {prefix} {i_dataset_fn}
+mv -f {actual} {o_fasta_gz_fn}
+touch {o_fasta_done_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_bam2fasta.sh')
     mkdirs(wdir) # Still needed, for now...
@@ -116,16 +132,27 @@ python -m falcon_polish.mains.run_bam2fasta {f_dataset_fn} {o_fasta_fn}
     hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
     get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
+def task_bam_scatter(self):
+    i_dataset_fn = fn(self.dataset)
+    o_split_subreadsets_fofn_fn = fn(self.split_subreadsets_fofn)
+    wdir = os.path.dirname(o_split_subreadsets_fofn_fn)
+    mkdirs(wdir)
+    bash = """
+python -m falcon_polish.mains.run_bam_scatter {i_dataset_fn} {o_split_subreadsets_fofn_fn}
+""".format(**locals())
+    bash_fn = os.path.join(wdir, 'run_bam_scatter.sh')
+    mkdirs(wdir)
+    open(bash_fn, 'w').write(bash)
+    self.generated_script_fn = bash_fn
 def task_prepare_falcon(self):
     """Pre-process FALCON cfg.
     This is super-fast, so it can always run locally.
     """
-    i_fasta_fn = fn(self.fasta)
-    input_fofn_fn = fn(self.input_fofn)
+    i_input_fofn_fn = fn(self.input_fofn)
     fc_cfg_fn = fn(self.fc_cfg)
     fc_json_config_fn = fn(self.fc_json_config)
-    config_falcon = self.parameters['falcon']
-    run_prepare_falcon(config_falcon, i_fasta_fn, fc_cfg_fn, fc_json_config_fn, input_fofn_fn)
+    falcon_parameters = self.parameters['falcon']
+    run_prepare_falcon(falcon_parameters, i_input_fofn_fn, fc_cfg_fn, fc_json_config_fn)
 def task_falcon(self):
     o_fasta_fn = fn(self.asm_fasta)
     o_preads_fofn_fn = fn(self.preads_fofn)
@@ -375,6 +402,65 @@ def task_foo(self):
     #print repr(self.parameters), repr(self.URL), repr(self.foo1)
     sys.system('touch {}'.format(fn(self.foo2)))
 
+def task_fastas2fofn(self):
+    # Record the fasta filenames in a FOFN, based on a filename convention.
+    # We depend on 'done' files, not directly on fastas, so we can
+    # delete fastas after we use them, downstream.
+    fofn_fn = fn(self.fofn)
+    wdir = os.path.dirname(fofn_fn)
+    dos = self.inputDataObjs
+    fasta_fns = [(fasta_from_fasta_done(fn(v)) + '.gz') for k,v in dos.items()]
+    content = '\n'.join(sorted(fasta_fns)) + '\n'
+    # TODO: Do we need ContentUpdater here?
+    with ContentUpdater(fofn_fn) as f:
+        f.write(content)
+def db_from_db_done(db_done_fn):
+    """
+    >>> db_from_db_done('/foo/bar/x_done')
+    '/foo/bar/x.db'
+    """
+    return db_done_fn[:-5] + '.db'
+def fasta_from_fasta_done(fasta_done_fn):
+    """
+    >>> fasta_from_fasta_done('/foo/bar/x_done')
+    '/foo/bar/x.fasta'
+    """
+    return fasta_done_fn[:-5] + '.fasta'
+def create_tasks_fasta2DB(split_subreadsets_fofn_pfn, parameters):
+    tasks = list()
+    next_inputs = dict()
+    topdir = os.path.dirname(fn(split_subreadsets_fofn_pfn)) # for now
+    # Create the fastas in parallel.
+    for i, chunk_fn in enumerate(open(fn(split_subreadsets_fofn_pfn)).read().splitlines()):
+        wdir = os.path.join(topdir, 'fasta_job_{:02d}'.format(i))
+        chunk_pfn = makePypeLocalFile(os.path.join(wdir, chunk_fn))
+        fasta_done_fn = os.path.join(wdir, 'chunk_{:02d}_done'.format(i))
+        # By depending on a sentinel, we are allowed to delete fastas later.
+        # Note: i might not match num in chunk_fn, but that is ok
+        fasta_done_pfn = makePypeLocalFile(fasta_done_fn)
+        make_task = PypeTask(
+                inputs = {"dataset": chunk_pfn, },
+                outputs =  {"fasta_done": fasta_done_pfn, },
+                parameters = parameters,
+                TaskType = PypeTaskBase,
+                URL = "task://localhost/bam2fasta_gz_{}".format(i))
+        task = make_task(task_bam2fasta_gz)
+        tasks.append(task)
+        next_inputs['fasta_{}_done'.format(i)] = fasta_done_pfn
+        #fasta_fn = fasta_from_fasta_done(fasta_done_fn)  # By convention.
+    # Create the FOFN of fastas.
+    fasta_fofn_fn = os.path.join(topdir, 'fasta.fofn')
+    fasta_fofn_pfn = makePypeLocalFile(fasta_fofn_fn)
+    make_task = PypeTask(
+            inputs = next_inputs,
+            outputs =  {"fofn": fasta_fofn_pfn,
+            },
+            parameters = parameters,
+            TaskType = PypeTaskBase,
+            URL = "task://localhost/fastas2fofn")
+    task = make_task(task_fastas2fofn)
+    tasks.append(task)
+    return tasks, fasta_fofn_pfn
 def yield_pipeline_chunk_names_from_json(ifs, key):
     d = json.loads(ifs.read())
     for cs in d['chunks']:
@@ -503,7 +589,7 @@ def flow(config):
             job_queue=config['hgap'].get('job_queue'),
     )
     concurrent_jobs = 16 # TODO: Configure this.
-    PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
+    PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs) # TODO: check if we need PypeProcThreadWorkflow
 
     use_tmpdir = config['hgap'].get('use_tmpdir')
     if use_tmpdir:
@@ -515,25 +601,39 @@ def flow(config):
             log.info('Keeping tempfile.tempdir={}'.format(tempfile.tempdir))
 
     dataset_pfn = makePypeLocalFile(config['pbsmrtpipe']['input_files'][0])
-    filtered_fasta_pfn = makePypeLocalFile('run-bam2fasta/input.fasta')
+    filtered_pfn = makePypeLocalFile('run-bam2fasta/filtered.subreadset.xml')
     make_task = PypeTask(
             inputs = {"dataset": dataset_pfn, },
-            outputs =  {"fasta": filtered_fasta_pfn, },
+            outputs = {"filtered": filtered_pfn, },
             parameters = parameters,
             TaskType = PypeTaskBase,
-            URL = "task://localhost/bam2fasta")
-    task = make_task(task_bam2fasta)
+            URL = "task://localhost/filterbam")
+    task = make_task(task_filterbam)
+    wf.addTask(task)
+
+    split_subreadsets_fofn_pfn = makePypeLocalFile('run-bam2fasta/chunked_subreadsets.fofn')
+    make_task = PypeTask(
+            inputs = {"dataset": filtered_pfn, },
+            outputs =  {"split_subreadsets_fofn": split_subreadsets_fofn_pfn, },
+            parameters = parameters,
+            TaskType = PypeTaskBase,
+            URL = "task://localhost/bam_scatter")
+    task = make_task(task_bam_scatter)
     wf.addTask(task)
     wf.refreshTargets()
 
-    input_fofn_pfn = makePypeLocalFile('run-falcon/raw_reads.fofn')
+    tasks, input_fofn_pfn = create_tasks_fasta2DB(split_subreadsets_fofn_pfn, parameters)
+    wf.addTasks(tasks)
+    wf.refreshTargets()
+
     fc_cfg_pfn = makePypeLocalFile('run-falcon/fc.cfg')
-    fc_json_config_pfn = makePypeLocalFile("run-falcon/fc.json")
+    fc_json_config_pfn = makePypeLocalFile('run-falcon/fc.json')
     make_task = PypeTask(
-            inputs = {"fasta": filtered_fasta_pfn, },
+            inputs = {
+                      "input_fofn": input_fofn_pfn,
+            },
             outputs = {"fc_cfg": fc_cfg_pfn,
                        "fc_json_config": fc_json_config_pfn,
-                       "input_fofn": input_fofn_pfn,
             },
             parameters = parameters,
             TaskType = PypeTaskBase,
