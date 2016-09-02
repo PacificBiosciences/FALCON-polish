@@ -121,7 +121,6 @@ def task_bam2fasta_gz(self):
     actual = '{}.fasta.gz'.format(prefix) # crazy convention
     #python -m falcon_polish.mains.run_bam2fasta {i_dataset_fn} {o_fasta_fn}
     bash = """
-set -vex
 mkdir -p {prefix}
 time bam2fasta -o {prefix} {i_dataset_fn}
 time mv -f {actual} {o_fasta_gz_fn}
@@ -181,7 +180,6 @@ def task_fasta2referenceset(self):
     o_referenceset_fn = fn(self.referenceset)
     wdir= os.path.dirname(o_referenceset_fn)
     bash = """
-set -vex
 rm -f {o_referenceset_fn} {i_fasta_fn}.fai
 python -m falcon_polish.mains.run_fasta2referenceset {i_fasta_fn} {o_referenceset_fn}
 """.format(**locals())
@@ -287,7 +285,6 @@ def task_gc_scatter(self):
     chunks_fofn_fn = fn(self.out_fofn)
     wdir, chunks_fofn_fn = os.path.split(chunks_fofn_fn)
     bash = """
-set -vex
 python -m falcon_polish.mains.run_gc_scatter \
         {alignmentset_fn} \
         {referenceset_fn} \
@@ -318,7 +315,6 @@ def task_gc_gather(self):
     open(fastq_fofn_fn, 'w').write('\n'.join(dset_fns) + '\n')
 
     bash = r"""
-set -vex
 python -m falcon_polish.mains.run_gc_gather \
         {fasta_ds_fofn_fn} \
         {fastq_fofn_fn} \
@@ -351,7 +347,6 @@ def task_genomic_consensus(self):
     assert odir == wdir
     # Possibly we should escape '{options}'
     bash = """
-set -vex
 python -m falcon_polish.mains.run_variantCaller --log-level DEBUG --options '{options}' \
         {alignmentset_fn} \
         {referenceset_fn} \
@@ -386,7 +381,6 @@ def task_polished_assembly_report(self):
     """
     # https://github.com/PacificBiosciences/pbreports/pull/186
     bash = r"""
-set -vex
 python -m pbreports.report.summarize_coverage.summarize_coverage \
         {options} \
         {gathered_alignmentset_fn} \
