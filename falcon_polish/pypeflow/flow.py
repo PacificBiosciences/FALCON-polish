@@ -117,13 +117,14 @@ def task_bam2fasta_gz(self):
     o_fasta_gz_fn = o_fasta_fn + '.gz'
     wdir = os.path.dirname(o_fasta_done_fn)
     prefix_basename = os.path.basename(o_fasta_fn)[:-6] #sans .fasta
-    prefix = '/tmp/cdunn/{}'.format(prefix_basename)
-    actual = '{}.fasta.gz'.format(prefix) # crazy convention
+    prefix = prefix_basename
+    actual = '{}.fasta'.format(prefix) # by convention in bam2fasta
     #python -m falcon_polish.mains.run_bam2fasta {i_dataset_fn} {o_fasta_fn}
     bash = """
-mkdir -p {prefix}
-time bam2fasta -o {prefix} {i_dataset_fn}
-time mv -f {actual} {o_fasta_gz_fn}
+mkdir -p {wdir}
+time bam2fasta -u -o {prefix} {i_dataset_fn}
+time gzip {actual}
+time mv -f {actual}.gz {o_fasta_gz_fn}
 touch {o_fasta_done_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_bam2fasta.sh')
