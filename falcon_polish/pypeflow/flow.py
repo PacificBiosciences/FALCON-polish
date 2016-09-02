@@ -110,11 +110,10 @@ python -m falcon_polish.mains.run_filterbam {i_dataset_fn} {o_dataset_fn} '{filt
     mkdirs(wdir)
     open(bash_fn, 'w').write(bash)
     sys.system('bash {}'.format(bash_fn))
-def task_bam2fasta_gz(self):
+def task_bam2fasta_dexta(self):
     i_dataset_fn = fn(self.dataset)
     o_fasta_done_fn = fn(self.fasta_done)
-    o_fasta_fn = fasta_from_fasta_done(o_fasta_done_fn)
-    o_fasta_gz_fn = o_fasta_fn + '.gz'
+    o_fasta_fn = base_from_done(o_fasta_done_fn) + '.fasta'
     wdir = os.path.dirname(o_fasta_done_fn)
     prefix_basename = os.path.basename(o_fasta_fn)[:-6] #sans .fasta
     prefix = prefix_basename
@@ -123,8 +122,8 @@ def task_bam2fasta_gz(self):
     bash = """
 mkdir -p {wdir}
 time bam2fasta -u -o {prefix} {i_dataset_fn}
-time gzip {actual}
-time mv -f {actual}.gz {o_fasta_gz_fn}
+time dexta -v {actual}
+#time mv -f {actual}.dexta {o_fasta_fn}.dexta
 touch {o_fasta_done_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_bam2fasta.sh')
@@ -411,7 +410,7 @@ def task_fastas2fofn(self):
     fofn_fn = fn(self.fofn)
     wdir = os.path.dirname(fofn_fn)
     dos = self.inputDataObjs
-    fasta_fns = [(fasta_from_fasta_done(fn(v)) + '.gz') for k,v in dos.items()]
+    fasta_fns = [(base_from_done(fn(v)) + '.dexta') for k,v in dos.items()]
     content = '\n'.join(sorted(fasta_fns)) + '\n'
     # TODO: Do we need ContentUpdater here?
     with ContentUpdater(fofn_fn) as f:
@@ -422,12 +421,12 @@ def db_from_db_done(db_done_fn):
     '/foo/bar/x.db'
     """
     return db_done_fn[:-5] + '.db'
-def fasta_from_fasta_done(fasta_done_fn):
+def base_from_done(done_fn):
     """
-    >>> fasta_from_fasta_done('/foo/bar/x_done')
-    '/foo/bar/x.fasta'
+    >>> base_from_done('/foo/bar/x_done')
+    '/foo/bar/x'
     """
-    return fasta_done_fn[:-5] + '.fasta'
+    return done_fn[:-5]
 def create_tasks_fasta2DB(split_subreadsets_fofn_pfn, parameters):
     tasks = list()
     next_inputs = dict()
@@ -445,11 +444,11 @@ def create_tasks_fasta2DB(split_subreadsets_fofn_pfn, parameters):
                 outputs =  {"fasta_done": fasta_done_pfn, },
                 parameters = parameters,
                 TaskType = PypeTaskBase,
-                URL = "task://localhost/bam2fasta_gz_{}".format(i))
-        task = make_task(task_bam2fasta_gz)
+                URL = "task://localhost/bam2fasta_dexta_{}".format(i))
+        task = make_task(task_bam2fasta_dexta)
         tasks.append(task)
         next_inputs['fasta_{}_done'.format(i)] = fasta_done_pfn
-        #fasta_fn = fasta_from_fasta_done(fasta_done_fn)  # By convention.
+        #fasta_fn = base_from_done(fasta_done_fn) + '.fasta'  # By convention.
     # Create the FOFN of fastas.
     fasta_fofn_fn = os.path.join(topdir, 'fasta.fofn')
     fasta_fofn_pfn = makePypeLocalFile(fasta_fofn_fn)
