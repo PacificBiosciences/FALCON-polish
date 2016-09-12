@@ -155,28 +155,32 @@ def task_prepare_falcon(self):
     fc_json_config_fn = fn(self.fc_json_config)
     falcon_parameters = self.parameters['falcon']
     run_prepare_falcon(falcon_parameters, i_input_fofn_fn, fc_cfg_fn, fc_json_config_fn)
-def task_falcon(self):
-    o_fasta_fn = fn(self.asm_fasta)
-    o_preads_fofn_fn = fn(self.preads_fofn)
-    o_length_cutoff_fn = fn(self.length_cutoff)
-    wdir, o_fasta_fn = os.path.split(o_fasta_fn)
-    odir, o_preads_fofn_fn = os.path.split(o_preads_fofn_fn)
-    assert odir == wdir
-    o_preads_fofn_fn = os.path.basename(o_preads_fofn_fn)
+def task_falcon_link(self):
+    falcon_link_done_fn = fn(self.falcon_link_done)
+    wdir, o_done_fn = os.path.split(falcon_link_done_fn)
+    o_fasta_fn = 'asm.fasta'
+    o_preads_fofn_fn = 'preads.fofn' # for the preassembly report
+    o_length_cutoff_fn = 'length_cutoff'
     bash = """
+# These from and to symlinks are all by convention.
+rm -f {o_fasta_fn}
 ln -sf 2-asm-falcon/p_ctg.fa {o_fasta_fn}
-#ln -sf 1-preads_ovl/input_preads.fofn {o_preads_fofn_fn}
+rm -f {o_preads_fofn_fn}
 ln -sf 0-rawreads/preads/input_preads.fofn {o_preads_fofn_fn}
+rm -f {o_length_cutoff_fn}
 ln -sf 0-rawreads/length_cutoff {o_length_cutoff_fn}
+touch {o_done_fn}
 ls -ltr
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_falcon.sh')
+    bash_fn = os.path.join(wdir, 'run_falcon_link.sh')
     mkdirs(wdir)
     open(bash_fn, 'w').write(bash)
     self.generated_script_fn = bash_fn
     # TODO: Run this on local machine.
 def task_fasta2referenceset(self):
-    i_fasta_fn = fn(self.fasta)
+    i_falcon_link_done_fn = fn(self.falcon_link_done)
+    idir, done_fn = os.path.split(i_falcon_link_done_fn)
+    i_fasta_fn = os.path.join(idir, 'asm.fasta') # by convention
     o_referenceset_fn = fn(self.referenceset)
     wdir= os.path.dirname(o_referenceset_fn)
     bash = """
@@ -656,26 +660,23 @@ def flow(config):
                 setNumThreadAllowed=PypeProcWatcherWorkflow.setNumThreadAllowed)
         PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
 
-    # Here is a sym-linking task to help us attach falcon into the dependency graph.
-    asm_fasta_pfn = makePypeLocalFile('run-falcon/asm.fasta')
-    preads_fofn_pfn = makePypeLocalFile('run-falcon/preads.fofn') # for the preassembly report
-    length_cutoff_pfn = makePypeLocalFile('run-falcon/length_cutoff')
+    # Here is a hard-linking task to help us attach falcon into the dependency graph.
+    falcon_link_done_pfn = makePypeLocalFile('run-falcon/falcon_link_done')
     make_task = PypeTask(
             inputs = {"falcon_asm_done": falcon_asm_done_pfn,},
-            outputs = {"asm_fasta": asm_fasta_pfn,
-                       "length_cutoff": length_cutoff_pfn,
-                       "preads_fofn": preads_fofn_pfn,
+            outputs = {
+                       "falcon_link_done": falcon_link_done_pfn,
             },
             parameters = parameters,
             TaskType = PypeTaskBase,
-            URL = "task://localhost/falcon")
-    task = make_task(task_falcon)
+            URL = "task://localhost/falcon_link")
+    task = make_task(task_falcon_link)
     wf.addTask(task)
 
     # The rest of the workflow will operate on datasets, not fasta directly.
     referenceset_pfn = makePypeLocalFile('run-fasta2referenceset/asm.referenceset.xml')
     make_task = PypeTask(
-            inputs =  {"fasta": asm_fasta_pfn,},
+            inputs =  {"falcon_link_done": falcon_link_done_pfn,},
             outputs = {"referenceset": referenceset_pfn,},
             parameters = parameters,
             TaskType = PypeTaskBase,
