@@ -202,9 +202,11 @@ def task_pbalign_scatter(self):
     out_json_fn = fn(self.out_json)
     wdir, out_json_fn = os.path.split(out_json_fn)
     mkdirs(wdir)
+    config = self.parameters.get('pbcoretools.task_options', {})
+    max_nchunks = int(config.get('scatter_subread_max_nchunks', '6'))
     bash = r"""
 #rm -f {out_json_fn}
-python -m pbcoretools.tasks.scatter_subread_reference -v --max_nchunks=5 \
+python -m pbcoretools.tasks.scatter_subread_reference -v --max_nchunks={max_nchunks} \
         {reads_fn} \
         {referenceset_fn} \
         {out_json_fn}
@@ -288,8 +290,11 @@ def task_gc_scatter(self):
     referenceset_fn = fn(self.referenceset)
     chunks_fofn_fn = fn(self.out_fofn)
     wdir, chunks_fofn_fn = os.path.split(chunks_fofn_fn)
+    config = self.parameters.get('pbcoretools.task_options', {})
+    max_nchunks = int(config.get('scatter_alignments_reference_max_nchunks', '13'))
     bash = """
 python -m falcon_polish.mains.run_gc_scatter \
+        --max-nchunks={max_nchunks} \
         {alignmentset_fn} \
         {referenceset_fn} \
         {chunks_fofn_fn}

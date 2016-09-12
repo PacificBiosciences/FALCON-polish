@@ -7,12 +7,11 @@ import os
 import sys
 log = logging.getLogger(__name__)
 
-def run(alignmentset, referenceset, fofn):
+def run(alignmentset, referenceset, fofn, max_nchunks):
     #'python -m pbcoretools.tasks.scatter_alignments_reference alignment_ds ds_reference json_out'
     dir_name = os.getcwd()
     dset = AlignmentSet(alignmentset, strict=True)
-    maxChunks = 2
-    dset_chunks = dset.split(contigs=True, maxChunks=maxChunks, breakContigs=True)
+    dset_chunks = dset.split(contigs=True, maxChunks=max_nchunks, breakContigs=True)
 
     # referenceset is used only for sanity checking.
     ReferenceSet(referenceset, strict=True)
@@ -42,6 +41,9 @@ def main(argv=sys.argv):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     #parser.add_argument('--logging',
     #        help='.ini or .json config file for Python logging module')
+    parser.add_argument('--max-nchunks',
+        default=12, type=int,
+        help='Maximum number of pieces of work. Same as "pbcoretools.task_options.scatter_alignments_reference_max_nchunks".')
     parser.add_argument('alignmentset',
         help='Input alignmentset XML filename.')
     parser.add_argument('referenceset',

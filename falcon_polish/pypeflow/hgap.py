@@ -121,7 +121,6 @@ def cfg2dict(ifp):
 DEFAULT_OPTIONS = """
 {
   "hgap": {
-    "SuppressAuto": true,
     "GenomeSize": 8000,
     "min_length_cutoff": 1,
     "job_type": "local",
@@ -147,7 +146,7 @@ DEFAULT_OPTIONS = """
   "pbalign": {
     "options": "--hitPolicy randombest --minAccuracy 70.0 --minLength 50 --algorithm=blasr",
     "algorithmOptions": "--minMatch 12 --bestn 10 --minPctSimilarity 70.0",
-    "_jdnotes": "--maxHits 1 --minAnchorSize 12 --maxDivergence=30 --minAccuracy=0.75 --minLength=50 --hitPolicy=random --seed=1",
+    "~jdnotes": "--maxHits 1 --minAnchorSize 12 --maxDivergence=30 --minAccuracy=0.75 --minLength=50 --hitPolicy=random --seed=1",
     "~comment": "Overrides for blasr alignment (prior to polishing)"
   },
   "variantCaller": {
@@ -161,6 +160,11 @@ DEFAULT_OPTIONS = """
   "pbreports.tasks.summarize_coverage": {
     "options": "--num_regions 1000 --region_size 0",
     "~comment": "--force_num_regions"
+  },
+  "pbcoretools.task_options": {
+    "scatter_subread_max_nchunks": "5",
+    "scatter_alignments_reference_max_nchunks": "12",
+    "~comment": "Overrides for pbcoretools task_options (mainly for scatter/gather)"
   },
   "pbsmrtpipe": {
     "~comment": "Overrides for pbsmrtpipe"
