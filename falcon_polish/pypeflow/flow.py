@@ -219,19 +219,25 @@ python -m pbcoretools.tasks.scatter_subread_reference -v --max_nchunks={max_nchu
     get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
 def task_pbalign_gather(self):
-    ds_out_fn = fn(self.ds_out)
+    o_unmapped_fn = fn(self.o_unmapped)
+    o_ds_fn = fn(self.o_ds)
     dos = self.inputDataObjs
+    unmapped_fns = [fn(v) for k,v in dos.items() if k.startswith('unmapped')]
     dset_fns = [fn(v) for k,v in dos.items() if k.startswith('alignmentset')]
-    wdir = os.path.dirname(ds_out_fn)
+    wdir = os.path.dirname(o_ds_fn)
     mkdirs(wdir)
+    unmapped_fofn_fn = os.path.join(wdir, 'unmapped.fofn')
+    open(unmapped_fofn_fn, 'w').write('\n'.join(unmapped_fns) + '\n')
     ds_fofn_fn = os.path.join(wdir, 'gathered.alignmentsets.fofn')
     open(ds_fofn_fn, 'w').write('\n'.join(dset_fns) + '\n')
     bash = r"""
-#rm -f {ds_out_fn}
+#rm -f {o_ds_fn}
 python -m falcon_polish.mains.run_pbalign_gather \
+        {unmapped_fofn_fn} \
+        {o_unmapped_fn} \
         {ds_fofn_fn} \
-        {ds_out_fn}
-#pbvalidate {ds_out_fn}
+        {o_ds_fn}
+#pbvalidate {o_ds_fn}
 """.format(**locals())
     bash_fn = os.path.join(wdir, 'run_pbalign_gather.sh')
     #open(bash_fn, 'w').write(bash)
@@ -254,6 +260,7 @@ def task_pbalign(self):
     reads_fn = fn(self.dataset)
     referenceset_fn = fn(self.referenceset)
     o_alignmentset_fn = fn(self.alignmentset)
+    o_unmapped_fn = fn(self.unmapped)
     tmpdir = tempfile.tempdir
     task_opts = self.parameters['pbalign']
     options = task_opts.get('options', '')
@@ -273,7 +280,7 @@ def task_pbalign(self):
     bash = """
 o_fn={o_alignmentset_fn}
 #rm -f ${{o_fn%.*}}
-pbalign --verbose --nproc 16 {options} --tmpDir {tmpdir} --algorithmOptions "{algorithmOptions}" {reads_fn} {referenceset_fn} {o_alignmentset_fn}
+pbalign --verbose --nproc 16 {options} --tmpDir {tmpdir} --algorithmOptions "{algorithmOptions}" --unaligned {o_unmapped_fn} {reads_fn} {referenceset_fn} {o_alignmentset_fn}
 #pbvalidate {o_alignmentset_fn}
 dataset relativize {o_alignmentset_fn}
 #pbvalidate {o_alignmentset_fn}
@@ -481,14 +488,16 @@ def create_tasks_pbalign(chunk_json_pfn, referenceset_pfn, parameters):
     """Create a pbalign task for each chunk, plus a gathering task.
     """
     tasks = list()
-    alignmentsets = dict()
+    gathering = dict()
     chunk_dir = os.path.dirname(fn(chunk_json_pfn))
     for i, subreadset_fn in enumerate(sorted(yield_pipeline_chunk_names_from_json(open(fn(chunk_json_pfn)), '$chunk.subreadset_id'))):
         wdir = 'run-pbalign-{:02d}'.format(i)
         subreadset_fn = os.path.join(chunk_dir, os.path.basename(subreadset_fn))
         subreadset_pfn = makePypeLocalFile(subreadset_fn)
+        unmapped_pfn = makePypeLocalFile('{wdir}/unmapped.txt'.format(**locals()))
         alignmentset_pfn = makePypeLocalFile('{wdir}/align.subreads.{i:02d}.alignmentset.xml'.format(**locals()))
-        alignmentsets['alignmentsets_{:02d}'.format(i)] = alignmentset_pfn
+        gathering['unmapped_{:02d}'.format(i)] = unmapped_pfn
+        gathering['alignmentsets_{:02d}'.format(i)] = alignmentset_pfn
         """Also produces:
         aligned.subreads.i.alignmentset.bam
         aligned.subreads.i.alignmentset.bam.bai
@@ -497,17 +506,23 @@ def create_tasks_pbalign(chunk_json_pfn, referenceset_pfn, parameters):
         make_task = PypeTask(
                 inputs = {"chunk_json": chunk_json_pfn,
                           "dataset": subreadset_pfn,
-                          "referenceset": referenceset_pfn,},
-                outputs = {"alignmentset": alignmentset_pfn,},
+                          "referenceset": referenceset_pfn,
+                },
+                outputs = {"alignmentset": alignmentset_pfn,
+                           "unmapped": unmapped_pfn,
+                },
                 parameters = parameters,
                 TaskType = PypeTaskBase,
                 URL = "task://localhost/pbalign/{}".format(os.path.basename(subreadset_fn)))
         task = make_task(task_pbalign)
         tasks.append(task)
-    alignmentset_pfn = makePypeLocalFile('run-pbalign_gather/aligned.subreads.alignmentset.xml')
+    o_alignmentset_pfn = makePypeLocalFile('run-pbalign_gather/aligned.subreads.alignmentset.xml')
+    o_unmapped_pfn = makePypeLocalFile('run-pbalign_gather/unmapped.txt')
     make_task = PypeTask(
-            inputs = alignmentsets,
-            outputs = {"ds_out": alignmentset_pfn,},
+            inputs = gathering,
+            outputs = {"o_ds": o_alignmentset_pfn,
+                       "o_unmapped": o_unmapped_pfn,
+            },
             parameters = parameters,
             TaskType = PypeTaskBase,
             URL = "task://localhost/pbalign_gather")
