@@ -4,9 +4,11 @@ from falcon_kit import stats_preassembly
 from falcon_kit.bash import get_write_script_and_wrapper
 
 from pypeflow.pwatcher_bridge import PypeProcWatcherWorkflow, MyFakePypeThreadTaskBase
-from pypeflow.controller import PypeThreadWorkflow
-from pypeflow.data import PypeLocalFile, makePypeLocalFile, fn
-from pypeflow.task import PypeTask, PypeThreadTaskBase
+from pypeflow.controller import PypeThreadWorkflow # for setNumThreadAllowed()
+from pypeflow.data import makePypeLocalFile, fn
+from pypeflow.task import PypeTask #, PypeThreadTaskBase
+from pypeflow.simple_pwatcher_bridge import (PypeProcWatcherWorkflow, MyFakePypeThreadTaskBase,
+        makePypeLocalFile, fn, PypeTask)
 
 import falcon_kit.mains.run1
 import falcon_kit.run_support
