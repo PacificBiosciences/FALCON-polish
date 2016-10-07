@@ -111,7 +111,7 @@ python -m falcon_polish.mains.run_filterbam {i_dataset_fn} {o_dataset_fn} '{filt
     bash_fn = os.path.join(wdir, 'run_filterbam.sh')
     mkdirs(wdir)
     open(bash_fn, 'w').write(bash)
-    sys.system('bash {}'.format(bash_fn))
+    self.generated_script_fn = bash_fn
 def task_bam2fasta_dexta(self):
     i_dataset_fn = fn(self.dataset)
     o_fasta_done_fn = fn(self.fasta_done)
@@ -155,9 +155,15 @@ def task_prepare_falcon(self):
     i_input_fofn_fn = fn(self.input_fofn)
     fc_cfg_fn = fn(self.fc_cfg)
     fc_json_config_fn = fn(self.fc_json_config)
+    wdir = os.path.dirname(fc_cfg_fn)
     falcon_parameters = self.parameters['falcon']
     run_prepare_falcon(falcon_parameters, i_input_fofn_fn, fc_cfg_fn, fc_json_config_fn)
+    bash_fn = os.path.join(wdir, 'run_prepare_falcon.sh')
+    open(bash_fn, 'w').write('') # empty
+    self.generated_script_fn = bash_fn
 def task_falcon_link(self):
+    falcon_asm_done_fn = fn(self.falcon_asm_done)
+    falcon_dir = os.path.dirname(falcon_asm_done_fn)
     falcon_link_done_fn = fn(self.falcon_link_done)
     wdir, o_done_fn = os.path.split(falcon_link_done_fn)
     o_fasta_fn = 'asm.fasta'
@@ -166,11 +172,11 @@ def task_falcon_link(self):
     bash = """
 # These from and to symlinks are all by convention.
 rm -f {o_fasta_fn}
-ln -sf 2-asm-falcon/p_ctg.fa {o_fasta_fn}
+ln -sf {falcon_dir}/2-asm-falcon/p_ctg.fa {o_fasta_fn}
 rm -f {o_preads_fofn_fn}
-ln -sf 0-rawreads/preads/input_preads.fofn {o_preads_fofn_fn}
+ln -sf {falcon_dir}/0-rawreads/preads/input_preads.fofn {o_preads_fofn_fn}
 rm -f {o_length_cutoff_fn}
-ln -sf 0-rawreads/length_cutoff {o_length_cutoff_fn}
+ln -sf {falcon_dir}0-rawreads/length_cutoff {o_length_cutoff_fn}
 touch {o_done_fn}
 ls -ltr
 """.format(**locals())
@@ -178,7 +184,7 @@ ls -ltr
     mkdirs(wdir)
     open(bash_fn, 'w').write(bash)
     self.generated_script_fn = bash_fn
-    # TODO: Run this on local machine.
+    # TODO: Run this on local machine, never in /tmp.
 def task_fasta2referenceset(self):
     i_falcon_link_done_fn = fn(self.falcon_link_done)
     idir, done_fn = os.path.split(i_falcon_link_done_fn)
@@ -223,7 +229,7 @@ python -m pbcoretools.tasks.scatter_subread_reference -v --max_nchunks={max_nchu
 def task_pbalign_gather(self):
     o_unmapped_fn = fn(self.o_unmapped)
     o_ds_fn = fn(self.o_ds)
-    dos = self.inputDataObjs
+    dos = self.inputs
     unmapped_fns = [fn(v) for k,v in dos.items() if k.startswith('unmapped')]
     dset_fns = [fn(v) for k,v in dos.items() if k.startswith('alignmentset')]
     wdir = os.path.dirname(o_ds_fn)
@@ -316,7 +322,7 @@ python -m falcon_polish.mains.run_gc_scatter \
     get_write_script_and_wrapper(hgap_config)(bash, bash_fn, job_done)
     self.generated_script_fn = bash_fn
 def task_gc_gather(self):
-    dos = self.inputDataObjs
+    dos = self.inputs
     ds_out_fn = fn(self.ds_out)
     fastq_out_fn = fn(self.fastq_out)
     wdir, ds_out_fn = os.path.split(ds_out_fn)
@@ -425,14 +431,18 @@ def task_fastas2fofn(self):
     # Record the fasta filenames in a FOFN, based on a filename convention.
     # We depend on 'done' files, not directly on fastas, so we can
     # delete fastas after we use them, downstream.
+    # Note: This is light and quick, so we can do it in-process.
     fofn_fn = fn(self.fofn)
     wdir = os.path.dirname(fofn_fn)
-    dos = self.inputDataObjs
+    dos = self.inputs
     fasta_fns = [(base_from_done(fn(v)) + '.dexta') for k,v in dos.items()]
     content = '\n'.join(sorted(fasta_fns)) + '\n'
     # TODO: Do we need ContentUpdater here?
     with ContentUpdater(fofn_fn) as f:
         f.write(content)
+    bash_fn = os.path.join(wdir, 'run_fastas2fofn.sh')
+    open(bash_fn, 'w').write('') # empty
+    self.generated_script_fn = bash_fn
 def db_from_db_done(db_done_fn):
     """
     >>> db_from_db_done('/foo/bar/x_done')
@@ -448,7 +458,7 @@ def base_from_done(done_fn):
 def create_tasks_fasta2DB(split_subreadsets_fofn_pfn, parameters):
     tasks = list()
     next_inputs = dict()
-    topdir = os.path.dirname(fn(split_subreadsets_fofn_pfn)) # for now
+    topdir = os.path.join(os.path.dirname(fn(split_subreadsets_fofn_pfn)), 'run-fastas2fofn')
     # Create the fastas in parallel.
     for i, chunk_fn in enumerate(open(fn(split_subreadsets_fofn_pfn)).read().splitlines()):
         wdir = os.path.join(topdir, 'fasta_job_{:03d}'.format(i)) # TODO: 02
@@ -628,7 +638,7 @@ def flow(config):
             log.info('Keeping tempfile.tempdir={}'.format(tempfile.tempdir))
 
     dataset_pfn = makePypeLocalFile(config['pbsmrtpipe']['input_files'][0])
-    filtered_pfn = makePypeLocalFile('run-bam2fasta/filtered.subreadset.xml')
+    filtered_pfn = makePypeLocalFile('run-filterbam/filtered.subreadset.xml')
     make_task = PypeTask(
             inputs = {"dataset": dataset_pfn, },
             outputs = {"filtered": filtered_pfn, },
@@ -638,7 +648,7 @@ def flow(config):
     task = make_task(task_filterbam)
     wf.addTask(task)
 
-    split_subreadsets_fofn_pfn = makePypeLocalFile('run-bam2fasta/chunked_subreadsets.fofn')
+    split_subreadsets_fofn_pfn = makePypeLocalFile('run-bam_scatter/chunked_subreadsets.fofn')
     make_task = PypeTask(
             inputs = {"dataset": filtered_pfn, },
             outputs =  {"split_subreadsets_fofn": split_subreadsets_fofn_pfn, },
@@ -684,7 +694,7 @@ def flow(config):
         PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
 
     # Here is a hard-linking task to help us attach falcon into the dependency graph.
-    falcon_link_done_pfn = makePypeLocalFile('run-falcon/falcon_link_done')
+    falcon_link_done_pfn = makePypeLocalFile('run-falcon_link/falcon_link_done')
     make_task = PypeTask(
             inputs = {"falcon_asm_done": falcon_asm_done_pfn,},
             outputs = {
