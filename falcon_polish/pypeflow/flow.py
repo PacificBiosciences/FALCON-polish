@@ -163,7 +163,11 @@ def task_prepare_falcon(self):
     self.generated_script_fn = bash_fn
 def task_falcon_link(self):
     falcon_asm_done_fn = fn(self.falcon_asm_done)
-    falcon_dir = os.path.dirname(falcon_asm_done_fn)
+    done_dir, done_fn = os.path.split(falcon_asm_done_fn)
+    falcon_dir = os.path.dirname(os.path.abspath(done_dir))
+    falcon_asm_fn = os.path.join(falcon_dir, '2-asm-falcon/p_ctg.fa') # or in abspath(done_dir)
+    input_preads_fn = os.path.join(falcon_dir, '0-rawreads/preads/input_preads.fofn')
+    length_cutoff_fn = os.path.join(falcon_dir, '0-rawreads/length_cutoff')
     falcon_link_done_fn = fn(self.falcon_link_done)
     wdir, o_done_fn = os.path.split(falcon_link_done_fn)
     o_fasta_fn = 'asm.fasta'
@@ -172,11 +176,11 @@ def task_falcon_link(self):
     bash = """
 # These from and to symlinks are all by convention.
 rm -f {o_fasta_fn}
-ln -sf {falcon_dir}/2-asm-falcon/p_ctg.fa {o_fasta_fn}
+ln -sf {falcon_asm_fn} {o_fasta_fn}
 rm -f {o_preads_fofn_fn}
-ln -sf {falcon_dir}/0-rawreads/preads/input_preads.fofn {o_preads_fofn_fn}
+ln -sf {input_preads_fn} {o_preads_fofn_fn}
 rm -f {o_length_cutoff_fn}
-ln -sf {falcon_dir}0-rawreads/length_cutoff {o_length_cutoff_fn}
+ln -sf {length_cutoff_fn} {o_length_cutoff_fn}
 touch {o_done_fn}
 ls -ltr
 """.format(**locals())
