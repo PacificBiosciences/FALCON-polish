@@ -430,6 +430,9 @@ def task_foo(self):
     log.debug('WARNME1 {!r}'.format(__name__))
     #print repr(self.parameters), repr(self.URL), repr(self.foo1)
     sys.system('touch {}'.format(fn(self.foo2)))
+    script_fn = 'noop.sh'
+    open(script_fn, 'w').write('echo NOOP raw')
+    self.generated_script_fn = script_fn
 
 def task_fastas2fofn(self):
     # Record the fasta filenames in a FOFN, based on a filename convention.
