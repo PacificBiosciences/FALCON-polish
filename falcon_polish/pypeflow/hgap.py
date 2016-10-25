@@ -136,10 +136,8 @@ DEFAULT_OPTIONS = """
     "overlap_filtering_setting": "--max_diff 1000 --max_cov 100000 --min_cov 0 --bestn 1000 --n_core 4",
     "ovlp_DBsplit_option": "-s50 -a",
     "ovlp_HPCdaligner_option": "-v -k15 -h60 -w6 -e.95 -l40 -s100 -M16",
-    "ovlp_concurrent_jobs": "32",
     "pa_DBsplit_option": "-x250 -s500 -a",
     "pa_HPCdaligner_option": "-v -k16 -h35 -w7 -e.70 -l40 -s100 -M16",
-    "pa_concurrent_jobs": "32",
     "seed_coverage": "74",
     "~comment": "Overrides for FALCON"
   },
@@ -182,10 +180,8 @@ length_cutoff_pr = 1
 overlap_filtering_setting = --max_diff 1000 --max_cov 100000 --min_cov 0 --bestn 1000 --n_core 4
 ovlp_DBsplit_option = -s50 -a
 ovlp_HPCdaligner_option = -v -k15 -h60 -w5 -H1 -e.95 -l40 -s100 -M4
-ovlp_concurrent_jobs = 32
 pa_DBsplit_option = -x250 -s500 -a
 pa_HPCdaligner_option = -v -k15 -h35 -w5 -H1 -e.70 -l40 -s100 -M4
-pa_concurrent_jobs = 32
 """
 # These are used in the passing siv test for lambda, same subread input! But GL=5M
 falcon_test_options = """
@@ -198,10 +194,8 @@ length_cutoff_pr = 1
 overlap_filtering_setting = --max_diff 10000 --max_cov 100000 --min_cov 0 --bestn 1000 --n_core 4
 ovlp_dbsplit_option = -x500 -s50
 ovlp_hpcdaligner_option = -v -dal4 -t32 -h60 -e.96 -l500 -s1000
-ovlp_concurrent_jobs = 32
 pa_dbsplit_option = -x500 -s50
 pa_hpcdaligner_option = -v -dal4 -t16 -e.70 -l1000 -s1000
-pa_concurrent_jobs = 32
 """
 
 def update2(start, updates):

@@ -36,11 +36,11 @@ def updated_cfg(options_dict):
             continue
         # Strip leading and trailing ws, just in case.
         opts[key] = val
-    opts['job_type'] = 'local' # OVERRIDE FOR NOW
+    #opts['job_type'] = 'local' # Not needed. We now run falcon PypeTasks within the HGAP refresh loop.
     def add(key, val):
         if not key in opts:
             opts[key] = val
-    add('input_fofn', 'NA') # actually, we do not need this anymore
+    #add('input_fofn', 'NA') # actually, we do not need this anymore
     add('target', 'assembly')
     add('sge_option_da', 'NA')
     add('sge_option_la', 'NA')
@@ -613,7 +613,7 @@ def flow(config):
             job_type=config['hgap'].get('job_type'),
             job_queue=config['hgap'].get('job_queue'),
     )
-    concurrent_jobs = 16 # TODO: Configure this.
+    concurrent_jobs = 24 # TODO: Configure this.
     PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs) # TODO: check if we need PypeProcThreadWorkflow
 
     use_tmpdir = config['hgap'].get('use_tmpdir')
