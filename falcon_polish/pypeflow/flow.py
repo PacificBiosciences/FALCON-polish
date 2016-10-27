@@ -676,6 +676,7 @@ def flow(config):
         # FALCON takes over the workflow for a while.
         # (For debugging, it is still possible to restart just fc_run, if desired.)
         falcon_asm_done_pfn = falcon_kit.mains.run1.run(wf, fc_cfg,
+                input_config_fn,
                 input_fofn_plf=input_fofn_pfn, # _pfn should be _plf, but oh well
                 setNumThreadAllowed=PypeProcWatcherWorkflow.setNumThreadAllowed)
         PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
