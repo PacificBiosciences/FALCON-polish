@@ -631,6 +631,8 @@ def flow(config):
     wf = PypeWorkflow(
             job_type=config['hgap'].get('job_type'),
             job_queue=config['hgap'].get('job_queue'),
+            watcher_type=config['hgap'].get('pwatcher_type', 'blocking'),
+            #watcher_directory=config['pwatcher_directory'],
     )
     concurrent_jobs = 24 # TODO: Configure this.
     PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs) # TODO: check if we need PypeProcThreadWorkflow
