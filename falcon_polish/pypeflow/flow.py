@@ -628,14 +628,15 @@ def flow(config):
     #wf = PypeWorkflow(job_type='local')
     log.debug('config=\n{}'.format(pprint.pformat(config)))
     # Set some defaults on the Workflow.
+    concurrent_jobs = 24 # TODO: Configure this.
     wf = PypeWorkflow(
             job_type=config['hgap'].get('job_type'),
             job_queue=config['hgap'].get('job_queue'),
             watcher_type=config['hgap'].get('pwatcher_type', 'blocking'),
             #watcher_directory=config['pwatcher_directory'],
+            max_jobs=config['hgap'].get('max_jobs', concurrent_jobs),
     )
-    concurrent_jobs = 24 # TODO: Configure this.
-    PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs) # TODO: check if we need PypeProcThreadWorkflow
+    PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs) # noop for simpler workflow
 
     use_tmpdir = config['hgap'].get('use_tmpdir')
     if use_tmpdir:
