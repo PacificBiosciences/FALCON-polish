@@ -2,10 +2,10 @@ from __future__ import absolute_import
 from .. import sys, start_task
 from falcon_kit import stats_preassembly
 
-from pypeflow.pwatcher_bridge import PypeProcWatcherWorkflow, MyFakePypeThreadTaskBase
-from pypeflow.controller import PypeThreadWorkflow # for setNumThreadAllowed()
-from pypeflow.data import makePypeLocalFile, fn
-from pypeflow.task import PypeTask #, PypeThreadTaskBase
+#from pypeflow.pwatcher_bridge import PypeProcWatcherWorkflow, MyFakePypeThreadTaskBase
+#from pypeflow.controller import PypeThreadWorkflow # for setNumThreadAllowed()
+#from pypeflow.data import makePypeLocalFile, fn
+#from pypeflow.task import PypeTask #, PypeThreadTaskBase
 from pypeflow.simple_pwatcher_bridge import (PypeProcWatcherWorkflow, MyFakePypeThreadTaskBase,
         makePypeLocalFile, fn, PypeTask)
 
@@ -201,7 +201,6 @@ def flow(config):
             #watcher_directory=config['pwatcher_directory'],
             max_jobs=config['hgap'].get('max_jobs', concurrent_jobs),
     )
-    PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs) # noop for simpler workflow
 
     use_tmpdir = config['hgap'].get('use_tmpdir')
     if use_tmpdir:
@@ -259,14 +258,13 @@ def flow(config):
         falcon_kit.mains.run1.fc_run_logger = falcon_kit.run_support.logger = logging.getLogger('falcon')
         fc_cfg = falcon_kit.run_support.get_dict_from_old_falcon_cfg(
                 falcon_kit.run_support.parse_config(input_config_fn))
-        PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
         # FALCON takes over the workflow for a while.
         # (For debugging, it is still possible to restart just fc_run, if desired.)
         falcon_asm_done_pfn = falcon_kit.mains.run1.run(wf, fc_cfg,
                 input_config_fn,
                 input_fofn_plf=input_fofn_pfn, # _pfn should be _plf, but oh well
-                setNumThreadAllowed=PypeProcWatcherWorkflow.setNumThreadAllowed)
-        PypeThreadWorkflow.setNumThreadAllowed(concurrent_jobs, concurrent_jobs)
+        )
+        wf.max_jobs = concurrent_jobs # in case Falcon changed this
 
     # Here is a hard-linking task to help us attach falcon into the dependency graph.
     falcon_link_done_pfn = makePypeLocalFile('run-falcon_link/falcon_link_done')
