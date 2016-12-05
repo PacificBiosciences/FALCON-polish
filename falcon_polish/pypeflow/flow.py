@@ -23,9 +23,7 @@ import tempfile
 log = logging.getLogger(__name__)
 
 #PypeWorkflow = PypeThreadWorkflow
-#PypeTaskBase = PypeThreadTaskBase
 PypeWorkflow = PypeProcWatcherWorkflow
-PypeTaskBase = MyFakePypeThreadTaskBase
 
 def create_tasks_fasta2DB(split_subreadsets_fofn_pfn, parameters):
     tasks = list()
@@ -43,8 +41,7 @@ def create_tasks_fasta2DB(split_subreadsets_fofn_pfn, parameters):
                 inputs = {"dataset": chunk_pfn, },
                 outputs =  {"fasta_done": fasta_done_pfn, },
                 parameters = parameters,
-                TaskType = PypeTaskBase,
-                URL = "task://localhost/bam2fasta_dexta_{}".format(i))
+        )
         task = make_task(start_task.task_bam2fasta_dexta)
         tasks.append(task)
         next_inputs['fasta_{}_done'.format(i)] = fasta_done_pfn
@@ -57,8 +54,7 @@ def create_tasks_fasta2DB(split_subreadsets_fofn_pfn, parameters):
             outputs =  {"fofn": fasta_fofn_pfn,
             },
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/fastas2fofn")
+    )
     task = make_task(start_task.task_fastas2fofn)
     tasks.append(task)
     return tasks, fasta_fofn_pfn
@@ -96,8 +92,7 @@ def create_tasks_pbalign(chunk_json_pfn, referenceset_pfn, parameters):
                            "unmapped": unmapped_pfn,
                 },
                 parameters = parameters,
-                TaskType = PypeTaskBase,
-                URL = "task://localhost/pbalign/{}".format(os.path.basename(subreadset_fn)))
+        )
         task = make_task(start_task.task_pbalign)
         tasks.append(task)
     o_alignmentset_pfn = makePypeLocalFile('run-pbalign_gather/aligned.subreads.alignmentset.xml')
@@ -108,8 +103,7 @@ def create_tasks_pbalign(chunk_json_pfn, referenceset_pfn, parameters):
                        "o_unmapped": o_unmapped_pfn,
             },
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/pbalign_gather")
+    )
     task = make_task(start_task.task_pbalign_gather)
     tasks.append(task)
     return tasks, alignmentset_pfn
@@ -162,8 +156,7 @@ def create_tasks_gc(fofn_pfn, referenceset_pfn, parameters):
                     "consensus_contigset": consensus_contigset_pfn,
                 },
                 parameters = parameters,
-                TaskType = PypeTaskBase,
-                URL = "task://localhost/genomic_consensus/{}".format(os.path.basename(alignmentset_fn)))
+        )
         task = make_task(start_task.task_genomic_consensus)
         tasks.append(task)
     contigset_pfn = makePypeLocalFile('run-gc-gather/contigset.xml')
@@ -177,8 +170,7 @@ def create_tasks_gc(fofn_pfn, referenceset_pfn, parameters):
                        "fastq_out": gathered_fastq_pfn,
             },
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/gc_gather")
+    )
     task = make_task(start_task.task_gc_gather)
     tasks.append(task)
     return tasks, contigset_pfn, gathered_fastq_pfn
@@ -217,8 +209,7 @@ def flow(config):
             inputs = {"dataset": dataset_pfn, },
             outputs = {"filtered": filtered_pfn, },
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/filterbam")
+    )
     task = make_task(start_task.task_filterbam)
     wf.addTask(task)
 
@@ -227,8 +218,7 @@ def flow(config):
             inputs = {"dataset": filtered_pfn, },
             outputs =  {"split_subreadsets_fofn": split_subreadsets_fofn_pfn, },
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/bam_scatter")
+    )
     task = make_task(start_task.task_bam_scatter)
     wf.addTask(task)
     wf.refreshTargets()
@@ -247,8 +237,7 @@ def flow(config):
                        "fc_json_config": fc_json_config_pfn,
             },
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/prepare_falcon")
+    )
     task = make_task(start_task.task_prepare_falcon)
     wf.addTask(task)
     wf.refreshTargets()
@@ -274,8 +263,7 @@ def flow(config):
                        "falcon_link_done": falcon_link_done_pfn,
             },
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/falcon_link")
+    )
     task = make_task(start_task.task_falcon_link)
     wf.addTask(task)
 
@@ -285,8 +273,7 @@ def flow(config):
             inputs =  {"falcon_link_done": falcon_link_done_pfn,},
             outputs = {"referenceset": referenceset_pfn,},
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/fasta2referenceset")
+    )
     task = make_task(start_task.task_fasta2referenceset)
     wf.addTask(task)
     wf.refreshTargets()
@@ -302,8 +289,7 @@ def flow(config):
                       "referenceset": referenceset_pfn,},
             outputs = {"out_json": pbalign_chunk_json_pfn,},
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/pbalign_scatter")
+    )
     task = make_task(start_task.task_pbalign_scatter)
     wf.addTask(task)
     wf.refreshTargets()
@@ -324,8 +310,7 @@ def flow(config):
                       "referenceset": referenceset_pfn,},
             outputs = {"out_fofn": gc_chunks_fofn_pfn,},
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/gc_scatter")
+    )
     task = make_task(start_task.task_gc_scatter)
     wf.addTask(task)
     wf.refreshTargets()
@@ -344,8 +329,7 @@ def flow(config):
                       "polished_fastq": gathered_fastq_pfn,},
             outputs = {"report_json": polished_assembly_report_json_pfn,},
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/polished_assembly_report")
+    )
     task = make_task(start_task.task_polished_assembly_report)
     wf.addTask(task)
 
@@ -365,8 +349,7 @@ def flow(config):
             inputs = {"foo1": foo_fn1,},
             outputs =  {"foo2": foo_fn2,},
             parameters = parameters,
-            TaskType = PypeTaskBase,
-            URL = "task://localhost/foo")
+    )
     task = make_task(start_task.task_foo)
     wf.addTask(task)
     wf.refreshTargets()
