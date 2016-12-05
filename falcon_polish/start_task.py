@@ -93,33 +93,28 @@ def task_filterbam(self):
     filters = config.get('filters', None)
     if not filters:
         filters = other_filters + ', length gte {:d}'.format(int(read_length))
-    wdir = os.path.dirname(o_dataset_fn)
     bash = """
 set -vex
 python -m falcon_polish.mains.run_filterbam {i_dataset_fn} {o_dataset_fn} '{filters}'
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_filterbam.sh')
-    #mkdirs(wdir)
+    bash_fn = 'run_filterbam.sh'
     open(bash_fn, 'w').write(bash)
     self.generated_script_fn = bash_fn
 def task_bam2fasta_dexta(self):
     i_dataset_fn = fn(self.dataset)
     o_fasta_done_fn = fn(self.fasta_done)
     o_fasta_fn = base_from_done(o_fasta_done_fn) + '.fasta'
-    wdir = os.path.dirname(o_fasta_done_fn)
     prefix_basename = os.path.basename(o_fasta_fn)[:-6] #sans .fasta
     prefix = prefix_basename
     actual = '{}.fasta'.format(prefix) # by convention in bam2fasta
     #python -m falcon_polish.mains.run_bam2fasta {i_dataset_fn} {o_fasta_fn}
     bash = """
-mkdir -p {wdir}
 time bam2fasta -u -o {prefix} {i_dataset_fn}
 time dexta -v {actual}
 #time mv -f {actual}.dexta {o_fasta_fn}.dexta
 touch {o_fasta_done_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_bam2fasta.sh')
-    #mkdirs(wdir) # Still needed, for now...
+    bash_fn = 'run_bam2fasta.sh'
     #open(bash_fn, 'w').write(bash)
     job_done = bash_fn + '.done'
     hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
@@ -128,14 +123,11 @@ touch {o_fasta_done_fn}
 def task_bam_scatter(self):
     i_dataset_fn = fn(self.dataset)
     o_split_subreadsets_fofn_fn = fn(self.split_subreadsets_fofn)
-    wdir = os.path.dirname(o_split_subreadsets_fofn_fn)
-    #mkdirs(wdir)
     bash = """
 set -vex
 python -m falcon_polish.mains.run_bam_scatter {i_dataset_fn} {o_split_subreadsets_fofn_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_bam_scatter.sh')
-    #mkdirs(wdir)
+    bash_fn = 'run_bam_scatter.sh'
     open(bash_fn, 'w').write(bash)
     self.generated_script_fn = bash_fn
 def task_prepare_falcon(self):
@@ -145,10 +137,9 @@ def task_prepare_falcon(self):
     i_input_fofn_fn = fn(self.input_fofn)
     fc_cfg_fn = fn(self.fc_cfg)
     fc_json_config_fn = fn(self.fc_json_config)
-    wdir = os.path.dirname(fc_cfg_fn)
     falcon_parameters = self.parameters['falcon']
     run_prepare_falcon(falcon_parameters, i_input_fofn_fn, fc_cfg_fn, fc_json_config_fn)
-    bash_fn = os.path.join(wdir, 'run_prepare_falcon.sh')
+    bash_fn = 'run_prepare_falcon.sh'
     open(bash_fn, 'w').write('') # empty
     self.generated_script_fn = bash_fn
 def task_falcon_link(self):
@@ -159,7 +150,6 @@ def task_falcon_link(self):
     input_preads_fn = os.path.join(falcon_dir, '0-rawreads/preads/input_preads.fofn')
     length_cutoff_fn = os.path.join(falcon_dir, '0-rawreads/length_cutoff')
     falcon_link_done_fn = fn(self.falcon_link_done)
-    wdir, o_done_fn = os.path.split(falcon_link_done_fn)
     o_fasta_fn = 'asm.fasta'
     o_preads_fofn_fn = 'preads.fofn' # for the preassembly report
     o_length_cutoff_fn = 'length_cutoff'
@@ -171,26 +161,22 @@ rm -f {o_preads_fofn_fn}
 ln -sf {input_preads_fn} {o_preads_fofn_fn}
 rm -f {o_length_cutoff_fn}
 ln -sf {length_cutoff_fn} {o_length_cutoff_fn}
-touch {o_done_fn}
+touch {falcon_link_done_fn}
 ls -ltr
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_falcon_link.sh')
-    #mkdirs(wdir)
+    bash_fn = 'run_falcon_link.sh'
     open(bash_fn, 'w').write(bash)
     self.generated_script_fn = bash_fn
-    # TODO: Run this on local machine, never in /tmp.
 def task_fasta2referenceset(self):
     i_falcon_link_done_fn = fn(self.falcon_link_done)
     idir, done_fn = os.path.split(i_falcon_link_done_fn)
     i_fasta_fn = os.path.join(idir, 'asm.fasta') # by convention
     o_referenceset_fn = fn(self.referenceset)
-    wdir= os.path.dirname(o_referenceset_fn)
     bash = """
 rm -f {o_referenceset_fn} {i_fasta_fn}.fai
 python -m falcon_polish.mains.run_fasta2referenceset {i_fasta_fn} {o_referenceset_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_fasta2referenceset.sh')
-    #mkdirs(wdir)
+    bash_fn = 'run_fasta2referenceset.sh'
     #open(bash_fn, 'w').write(bash)
     job_done = bash_fn + '.done'
     hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
@@ -202,8 +188,6 @@ def task_pbalign_scatter(self):
     reads_fn = fn(self.dataset)
     referenceset_fn = fn(self.referenceset)
     out_json_fn = fn(self.out_json)
-    wdir, out_json_fn = os.path.split(out_json_fn)
-    #mkdirs(wdir)
     config = self.parameters.get('pbcoretools.task_options', {})
     max_nchunks = int(config.get('scatter_subread_max_nchunks', '6'))
     bash = r"""
@@ -213,8 +197,7 @@ python -m pbcoretools.tasks.scatter_subread_reference -v --max_nchunks={max_nchu
         {referenceset_fn} \
         {out_json_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_pbalign_scatter.sh')
-    #mkdirs(wdir)
+    bash_fn = 'run_pbalign_scatter.sh'
     #open(bash_fn, 'w').write(bash)
     job_done = bash_fn + '.done'
     hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
@@ -226,11 +209,9 @@ def task_pbalign_gather(self):
     dos = self.inputs
     unmapped_fns = [fn(v) for k,v in dos.items() if k.startswith('unmapped')]
     dset_fns = [fn(v) for k,v in dos.items() if k.startswith('alignmentset')]
-    wdir = os.path.dirname(o_ds_fn)
-    #mkdirs(wdir)
-    unmapped_fofn_fn = os.path.join(wdir, 'unmapped.fofn')
+    unmapped_fofn_fn = 'unmapped.fofn'
     open(unmapped_fofn_fn, 'w').write('\n'.join(unmapped_fns) + '\n')
-    ds_fofn_fn = os.path.join(wdir, 'gathered.alignmentsets.fofn')
+    ds_fofn_fn = 'gathered.alignmentsets.fofn'
     open(ds_fofn_fn, 'w').write('\n'.join(dset_fns) + '\n')
     bash = r"""
 #rm -f {o_ds_fn}
@@ -241,7 +222,7 @@ python -m falcon_polish.mains.run_pbalign_gather \
         {o_ds_fn}
 #pbvalidate {o_ds_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_pbalign_gather.sh')
+    bash_fn = 'run_pbalign_gather.sh'
     #open(bash_fn, 'w').write(bash)
     job_done = bash_fn + '.done'
     hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
@@ -267,7 +248,6 @@ def task_pbalign(self):
     task_opts = self.parameters['pbalign']
     options = task_opts.get('options', '')
     algorithmOptions = task_opts.get('algorithmOptions', '')
-    wdir, o_alignmentset_fn = os.path.split(o_alignmentset_fn)
 
     # Write a file of absolute paths. But that file is relative to CWD:
     abs_alignmentset_fn = 'abs.' + o_alignmentset_fn
@@ -287,8 +267,7 @@ pbalign --verbose --nproc 16 {options} --tmpDir {tmpdir} --algorithmOptions "{al
 dataset relativize {o_alignmentset_fn}
 #pbvalidate {o_alignmentset_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_pbalign.sh')
-    #mkdirs(wdir)
+    bash_fn = 'run_pbalign.sh'
     #open(bash_fn, 'w').write(bash)
     job_done = bash_fn + '.done'
     hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
@@ -298,7 +277,6 @@ def task_gc_scatter(self):
     alignmentset_fn = fn(self.alignmentset)
     referenceset_fn = fn(self.referenceset)
     chunks_fofn_fn = fn(self.out_fofn)
-    wdir, chunks_fofn_fn = os.path.split(chunks_fofn_fn)
     config = self.parameters.get('pbcoretools.task_options', {})
     max_nchunks = int(config.get('scatter_alignments_reference_max_nchunks', '13'))
     bash = """
@@ -308,8 +286,7 @@ python -m falcon_polish.mains.run_gc_scatter \
         {referenceset_fn} \
         {chunks_fofn_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_gc_scatter.sh')
-    #mkdirs(wdir)
+    bash_fn = 'run_gc_scatter.sh'
     #open(bash_fn, 'w').write(bash)
     job_done = bash_fn + '.done'
     hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
@@ -319,16 +296,12 @@ def task_gc_gather(self):
     dos = self.inputs
     ds_out_fn = fn(self.ds_out)
     fastq_out_fn = fn(self.fastq_out)
-    wdir, ds_out_fn = os.path.split(ds_out_fn)
-    odir, fastq_out_fn = os.path.split(fastq_out_fn)
-    assert odir == wdir
-    #mkdirs(wdir)
 
-    fasta_ds_fofn_fn = os.path.join(wdir, 'fasta.contigset.fofn')
+    fasta_ds_fofn_fn = 'fasta.contigset.fofn'
     dset_fns = [fn(v) for k,v in dos.items() if k.startswith('contigset_')]
     open(fasta_ds_fofn_fn, 'w').write('\n'.join(dset_fns) + '\n')
 
-    fastq_fofn_fn = os.path.join(wdir, 'fastq.fofn')
+    fastq_fofn_fn = 'fastq.fofn'
     dset_fns = [fn(v) for k,v in dos.items() if k.startswith('fastq_')]
     open(fastq_fofn_fn, 'w').write('\n'.join(dset_fns) + '\n')
 
@@ -339,7 +312,7 @@ python -m falcon_polish.mains.run_gc_gather \
         {ds_out_fn} \
         {fastq_out_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_gc_gather.sh')
+    bash_fn = 'run_gc_gather.sh'
     #open(bash_fn, 'w').write(bash)
     job_done = bash_fn + '.done'
     hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
@@ -356,13 +329,6 @@ def task_genomic_consensus(self):
     if '--alignmentSetRefWindows' not in options:
         options += ' --alignmentSetRefWindows'
     fasta_fn = re.sub(".contigset.xml", ".fasta", consensus_contigset_fn)
-    wdir, fasta_fn = os.path.split(fasta_fn)
-    odir, consensus_contigset_fn = os.path.split(consensus_contigset_fn)
-    assert odir == wdir
-    odir, variants_gff_fn = os.path.split(variants_gff_fn)
-    assert odir == wdir
-    wdir, polished_fastq_fn = os.path.split(polished_fastq_fn)
-    assert odir == wdir
     # Possibly we should escape '{options}'
     bash = """
 python -m falcon_polish.mains.run_variantCaller --log-level DEBUG --options '{options}' \
@@ -373,8 +339,7 @@ python -m falcon_polish.mains.run_variantCaller --log-level DEBUG --options '{op
         {fasta_fn} \
         {consensus_contigset_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_gc.sh')
-    #mkdirs(wdir)
+    bash_fn = 'run_gc.sh'
     #open(bash_fn, 'w').write(bash)
     job_done = bash_fn + '.done'
     hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
@@ -387,8 +352,6 @@ def task_polished_assembly_report(self):
     gathered_alignmentset_fn = fn(self.gathered_alignmentset)
     polished_fastq_fn = fn(self.polished_fastq)
     report_fn = fn(self.report_json)
-    wdir, report_fn = os.path.split(report_fn)
-    #mkdirs(wdir)
     alignment_summary_gff_fn = 'alignment.summary.gff'
     """
     If necessary, we could call this:
@@ -409,8 +372,7 @@ python -m pbreports.report.polished_assembly \
         {polished_fastq_fn} \
         {report_fn}
 """.format(**locals())
-    bash_fn = os.path.join(wdir, 'run_report.sh')
-    #mkdirs(wdir)
+    bash_fn = 'run_report.sh'
     #open(bash_fn, 'w').write(bash)
     job_done = bash_fn + '.done'
     hgap_config = self.parameters.get('hgap') # for now, all tasks are tmpdir, or not
@@ -430,13 +392,12 @@ def task_fastas2fofn(self):
     # delete fastas after we use them, downstream.
     # Note: This is light and quick, so we can do it in-process.
     fofn_fn = fn(self.fofn)
-    wdir = os.path.dirname(fofn_fn)
     dos = self.inputs
     fasta_fns = [(base_from_done(fn(v)) + '.dexta') for k,v in dos.items()]
     content = '\n'.join(sorted(fasta_fns)) + '\n'
     # TODO: Do we need ContentUpdater here?
     with ContentUpdater(fofn_fn) as f:
         f.write(content)
-    bash_fn = os.path.join(wdir, 'run_fastas2fofn.sh')
+    bash_fn = 'run_fastas2fofn.sh'
     open(bash_fn, 'w').write('') # empty
     self.generated_script_fn = bash_fn
