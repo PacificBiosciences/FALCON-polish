@@ -1,4 +1,4 @@
-import falcon_polish.stats_preassembly as func
+import falcon_kit.stats_preassembly as func
 import StringIO
 from nose.tools import assert_equal
 
