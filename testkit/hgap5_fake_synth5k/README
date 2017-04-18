@@ -1,0 +1,5 @@
+Very fast test, based on a 5k random genome and error-free reads sampled from it.
+
+Copied from testkit-jobs/sa3_pipelines/hgap5_fake/synth5k/
+
+For now, this actually does not use the local Python code. It might be moved to a different repo later. (The testkit repo seems too large.)

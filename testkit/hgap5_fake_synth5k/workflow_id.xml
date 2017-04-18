@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pipeline-template>
+
+    <!-- Reference a workflow template defined in -->
+    <import-template id="pbsmrtpipe.pipelines.hgap_fat" />
+
+</pipeline-template>
