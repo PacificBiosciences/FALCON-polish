@@ -1,12 +1,20 @@
-#!/bin/bash -e
-/bin/ls -l
+#!/bin/bash -xe
 type module >& /dev/null || . /mnt/software/Modules/current/init/bash
 module load git/2.8.3
 module load gcc/4.9.2
 module load ccache/3.2.3
 
+mkdir -p prebuilts/libbzip2-1.0.6
+curl -sL http://ossnexus/repository/unsupported/pitchfork/gcc-4.9.2/libbzip2-1.0.6.tgz \
+| tar zxf - -C prebuilts/libbzip2-1.0.6
+if [ ! -e .distfiles/gtest/release-1.7.0.tar.gz ]; then
+  mkdir -p .distfiles/gtest
+  curl -sL http://ossnexus/repository/unsupported/distfiles/googletest/release-1.7.0.tar.gz \
+    -o .distfiles/gtest/release-1.7.0.tar.gz
+fi
+
 cat > pitchfork/settings.mk << EOF
-CCACHE_DIR            = /net/flash/localdisk/scratch/bamboo.ccache
+CCACHE_DIR            = /mnt/secondary/Share/tmp/bamboo.mobs.ccachedir
 DISTFILES             = $PWD/.distfiles
 # from Herb
 HAVE_OPENSSL      = /mnt/software/o/openssl/1.0.2a
@@ -19,6 +27,7 @@ HAVE_NCURSES      = /mnt/software/n/ncurses/5.9
 HAVE_HDF5         = /mnt/software/a/anaconda2/4.2.0
 HAVE_OPENBLAS     = /mnt/software/o/openblas/0.2.14
 HAVE_CMAKE        = /mnt/software/c/cmake/3.2.2/bin/cmake
+HAVE_LIBBZIP2     = $PWD/prebuilts/libbzip2-1.0.6
 #
 htslib_REPO           = $PWD/htslib
 pbbam_REPO            = $PWD/pbbam
@@ -44,4 +53,5 @@ falcon_polish_REPO    = $PWD/falcon_polish
 falcon_kit_REPO       = $PWD/falcon
 EOF
 cd pitchfork
+echo y|make _startover
 make -j10 falcon_polish nose
