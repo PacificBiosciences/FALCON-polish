@@ -1,6 +1,8 @@
 #!/bin/bash
+THISDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 type module >& /dev/null || . /mnt/software/Modules/current/init/bash
 set -vex
+cd ${THISDIR}
 ls -larth ..
 ls -larth
 pwd
