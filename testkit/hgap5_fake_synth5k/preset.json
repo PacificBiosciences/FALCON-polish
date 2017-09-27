@@ -1,0 +1,23 @@
+{
+  "_comment": "Automatically converted from XML", 
+  "pipelineId": "pbsmrtpipe.pipelines.hgap_fat", 
+  "presetId": "hgap5_synth5k", 
+  "name": "hgap5_synth5k", 
+  "description": "Presets for test of pbsmrtpipe.pipelines.hgap_fat", 
+  "options": {
+    "pbsmrtpipe.options.debug_mode": false, 
+    "pbsmrtpipe.options.max_nproc": 16, 
+    "pbsmrtpipe.options.tmp_dir": "/tmp", 
+    "pbsmrtpipe.options.chunk_mode": false, 
+    "pbsmrtpipe.options.max_nchunks": 128, 
+    "pbsmrtpipe.options.distributed_mode": true, 
+    "pbsmrtpipe.options.exit_on_failure": false, 
+    "pbsmrtpipe.options.cluster_manager": "pbsmrtpipe.cluster_templates.sge_pacbio", 
+    "pbsmrtpipe.options.max_nworkers": 100
+  }, 
+  "taskOptions": {
+    "falcon_ns.task_options.HGAP_GenomeLength_str": "5000", 
+    "falcon_ns.task_options.HGAP_Options_JSON": "{\n              \"hgap\": {\n                \"use_tmpdir\": \"/scratch\",\n              },\n            } ", 
+    "falcon_ns.task_options.HGAP_SeedLengthCutoff_str": "20"
+  }
+}

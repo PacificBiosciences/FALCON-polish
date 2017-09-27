@@ -8,13 +8,13 @@ try: clean
 try-old: clean
 	pbsmrtpipe pipeline-id pbsmrtpipe.pipelines.polished_falcon_lean --debug -e eid_subread:/pbi/dept/secondary/siv/testdata/hgap/synth5k/synth5k.xml --preset-xml=./preset.xml --force-distributed --output-dir=./job_output
 test-local: clean
-	pbtestkit-runner ${PB_TKR_DEBUG} testkit.cfg --local-only
+	pbtestkit-runner ${PB_TKR_DEBUG} testkit_cfg.json --local-only
 test-local-chunk: clean
-	pbtestkit-runner ${PB_TKR_DEBUG} testkit.cfg --local-only --force-chunk-mode
+	pbtestkit-runner ${PB_TKR_DEBUG} testkit_cfg.json --local-only --force-chunk-mode
 test: clean
-	pbtestkit-runner ${PB_TKR_DEBUG} testkit.cfg
+	pbtestkit-runner ${PB_TKR_DEBUG} testkit_cfg.json
 test-chunk: clean
-	pbtestkit-runner ${PB_TKR_DEBUG} testkit.cfg --force-distributed --force-chunk-mode
+	pbtestkit-runner ${PB_TKR_DEBUG} testkit_cfg.json --force-distributed --force-chunk-mode
 sanity:
 	python -c 'import pbcore; print pbcore'
 import:
