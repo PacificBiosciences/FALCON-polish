@@ -1,0 +1,26 @@
+{
+  "_comment": "Automatically converted from .cfg file", 
+  "testId": "hgap5_synth5k", 
+  "pipelineId": "pbsmrtpipe.pipelines.hgap_fat", 
+  "entryPoints": [
+    {
+      "entryId": "eid_subread", 
+      "path": "/pbi/dept/secondary/siv/testdata/hgap/synth5k/synth5k.xml"
+    }
+  ], 
+  "description": null, 
+  "jobType": "pbsmrtpipe", 
+  "outputDir": "job_output", 
+  "presetJson": "preset.json", 
+  "pythonTests": {
+    "pbsmrtpipe.testkit.core": [
+      "test_zero", 
+      "test_resources", 
+      "test_datastore", 
+      "test_resolved_tool_contracts"
+    ], 
+    "pysiv2.custom": [
+      "test_assembly_hgap5"
+    ]
+  }
+}
