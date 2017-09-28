@@ -1,0 +1,42 @@
+{
+    "chunked_tasks": [
+        "genomic_consensus.tasks.variantcaller",
+        "pbalign.tasks.pbalign"
+    ],
+    "filter_subreads": {
+        "number_of_filtered_subreads": 50,
+        "min_subread_read_quality__ge": 0.7
+    },
+    "task_options": {
+        "falcon_ns": {
+            "HGAP_GenomeLength_str": "5000",
+            "HGAP_SeedCoverage_str": "20"
+        },
+        "pbalign": {
+            "concordant": false
+        },
+        "genomic_consensus": {
+            "algorithm": "arrow",
+            "diploid": false
+        }
+    },
+    "reports": {
+        "preassembly": {
+            "raw_bases": 100000,
+            "raw_reads": 50,
+            "raw_mean": 2000,
+            "raw_n50": 2000,
+            "preassembled_bases": 99447,
+            "preassembled_reads": 50,
+            "preassembled_mean": 1989,
+            "preassembled_n50": 1989,
+            "preassembled_yield": 0.994
+        },
+        "polished_assembly": {
+            "polished_contigs": 1,
+            "sum_contig_lengths": 5000,
+            "n_50_contig_length__eq": 5000,
+            "max_contig_length": 5000
+        }
+    }
+}
