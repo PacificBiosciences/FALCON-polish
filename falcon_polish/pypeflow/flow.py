@@ -6,6 +6,7 @@ from falcon_kit import stats_preassembly
 #from pypeflow.controller import PypeThreadWorkflow # for setNumThreadAllowed()
 #from pypeflow.data import makePypeLocalFile, fn
 #from pypeflow.task import PypeTask #, PypeThreadTaskBase
+import pypeflow.simple_pwatcher_bridge
 from pypeflow.simple_pwatcher_bridge import (PypeProcWatcherWorkflow, MyFakePypeThreadTaskBase,
         makePypeLocalFile, fn, PypeTask)
 
