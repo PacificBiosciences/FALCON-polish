@@ -47,9 +47,18 @@ module load anaconda/4.x.x
 module load htslib/1.3.1
 export PYTHONUSERBASE=$PWD/deployment
 
-cd falcon_polish
-nosetests -v \
-    --verbose --with-xunit \
-    --xunit-file=${bamboo_build_working_directory}/test-reports/fcpolish_xunit.xml \
-    utest
-chmod +w -R .
+
+# For speed, use cdunn wheelhouse.
+WHEELHOUSE=/home/UNIXHOME/cdunn/wheelhouse/gcc-6/
+pip install --user --no-index --find-links=${WHEELHOUSE} pip pytest pytest-cov pylint
+
+export MY_TEST_FLAGS="-v -s --durations=0 --cov=. --cov-report=term-missing --cov-report=xml:coverage.xml --cov-branch"
+make pytest
+#sed -i -e 's@filename="@filename="./pbfalcon/@g' coverage.xml
+
+make pylint
+
+pwd
+ls -larth
+find . -name '*.pyc' | xargs rm
+#chmod +w -R .
