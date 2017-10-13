@@ -38,3 +38,18 @@ pip install --user --no-index http://nexus/repository/unsupported/pitchfork/gcc-
 pip install --user --no-index ./pbcore
 pip install --user --no-index http://nexus/repository/unsupported/gcc-4.9.2/pythonpkgs/GenomicConsensus-${GenomicConsensus_VERSION}-cp27-cp27mu-linux_x86_64.whl
 pip install --user --no-index ./falcon_polish
+
+
+
+mkdir -p test-reports
+type module >& /dev/null || . /mnt/software/Modules/current/init/bash
+module load anaconda/4.x.x
+module load htslib/1.3.1
+export PYTHONUSERBASE=$PWD/deployment
+
+cd falcon_polish
+nosetests -v \
+    --verbose --with-xunit \
+    --xunit-file=${bamboo_build_working_directory}/test-reports/fcpolish_xunit.xml \
+    utest
+chmod +w -R .
