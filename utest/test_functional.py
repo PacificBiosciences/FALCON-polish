@@ -1,6 +1,6 @@
 import falcon_polish.functional as func
 import StringIO
-from nose.tools import assert_equal, assert_raises
+import pytest
 
 
 def test_calc_cutoff():
@@ -8,15 +8,16 @@ def test_calc_cutoff():
     total = 20
     def check(n, expected):
         got = func.calc_cutoff(n, pairs)
-        assert_equal(expected, got)
+        assert(expected == got)
     for n, expected in ((0, 3), (12, 3), (13, 2), (20, 1)):
         yield check, n, expected
-    assert_raises(Exception, func.calc_cutoff, 21, pairs)
+    with pytest.raises(Exception) as excinfo:
+        func.calc_cutoff(21, pairs)
 
 def test_total_length():
     pairs = {0: 1, 1:2, 2:3, 3:4}.items()
     total = func.total_length(pairs)
-    assert_equal(20, total)
+    assert(20 == total)
 
 def test_fns_from_fofn():
     data = """
@@ -27,12 +28,12 @@ c.d
     fofn = StringIO.StringIO(data)
     expected = ['a-b', 'c.d']
     got = list(func.fns_from_fofn(fofn))
-    assert_equal(expected, got)
+    assert(expected == got)
 
 def test_joined_strs():
     def verify(args, expected):
         got = func.joined_strs(*args)
-        assert_equal(list(got), list(expected))
+        assert(list(got) == list(expected))
     yield verify, ([], 1), []
     yield verify, (['a'], 1), ['a']
     yield verify, (['a'], 2), ['a']
