@@ -1,15 +1,13 @@
-#!/bin/bash
-THISDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+#!/bin/bash -e
 type module >& /dev/null || . /mnt/software/Modules/current/init/bash
 set -vex
-cd ${THISDIR}
 ls -larth ..
 ls -larth
 pwd
 
 module purge
 module load gcc/6.4.0
-module load ccache/3.2.3
+module load ccache
 
 module load python/2.7.13-UCS2
 make wheel WHEELHOUSE=artifacts/gcc-6.4.0/wheelhouse

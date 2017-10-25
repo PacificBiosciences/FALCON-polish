@@ -29,8 +29,11 @@ def run(referenceset, fastq, gff, fasta, contigset, alignmentset, options, log_l
     try:
         say('Converting fasta {!r} to contigset {!r}'.format(fasta, contigset))
         # Convert to contigset.xml
+
         import pysam
-        pysam.faidx(fasta)
+        pysam.faidx(fasta) # pylint: disable=no-member
+        # I do not know why pylint does not see this defined.
+
         ds = ContigSet(fasta, strict=True)
         ds.write(contigset, relPaths=True)
         say('Successfully wrapped fasta {!r} in contigset {!r}'.format(fasta, contigset))

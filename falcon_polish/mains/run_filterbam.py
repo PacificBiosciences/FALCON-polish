@@ -13,7 +13,7 @@ log = logging.getLogger()
 def run(in_file, out_file, filterstr):
     dataSet = openDataSet(in_file)
     filters = dict(parse_filter_list(filterstr.split(',')))
-    log.info("Adding {} filters to {}: {}".format(
+    log.info("Adding {} filters to {}->{}: {}".format(
         len(filters), in_file, out_file, repr(filters)))
     dataSet.filters.addFilter(**filters)
     log.info("Added. Writing new dataset {}".format(repr(out_file)))
