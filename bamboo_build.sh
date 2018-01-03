@@ -1,14 +1,14 @@
 #!/bin/bash -e
 type module >& /dev/null || . /mnt/software/Modules/current/init/bash
-module load git/2.8.3
-module load gcc/6.4.0
+module load git
+module load gcc
 module load ccache
-#module load python/2.7.13-UCS4
-#module load htslib/1.3.1
+#module load python/2-UCS4
+#module load htslib
 
 # The following is missing some stuff.
 ##export CCACHE_DIR=/mnt/secondary/Share/tmp/bamboo.mobs.ccachedir
-##module load boost/1.60
+##module load boost
 ##if [[ $BOOST_ROOT =~ /include ]]; then
 ##  set -x
 ##  BOOST_ROOT=$(dirname $BOOST_ROOT)
@@ -40,7 +40,7 @@ module load ccache
 ##pip install --user --no-index http://nexus/repository/unsupported/gcc-4.9.2/pythonpkgs/GenomicConsensus-${GenomicConsensus_VERSION}-cp27-cp27mu-linux_x86_64.whl
 
 module load smrttools/incremental
-module load python/2.7.13-UCS4
+module load python/2-UCS4
 
 set -vex
 
